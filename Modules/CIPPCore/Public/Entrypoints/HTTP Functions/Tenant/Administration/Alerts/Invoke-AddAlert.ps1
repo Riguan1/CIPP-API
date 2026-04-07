@@ -1,4 +1,4 @@
-Function Invoke-AddAlert {
+function Invoke-AddAlert {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -22,10 +22,12 @@ Function Invoke-AddAlert {
         type            = $Request.Body.logbook.value
         RowKey          = $RowKey
         PartitionKey    = 'Webhookv2'
+        AlertComment    = [string]$Request.Body.AlertComment
     }
     $WebhookTable = Get-CippTable -TableName 'WebhookRules'
     Add-CIPPAzDataTableEntity @WebhookTable -Entity $CompleteObject -Force
     $Results = "Added Audit Log Alert for $($Tenants.count) tenants. It may take up to four hours before Microsoft starts delivering these alerts."
+    Write-LogMessage -API 'AddAlert' -message $Results -sev Info -LogData $CompleteObject -headers $Request.Headers
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

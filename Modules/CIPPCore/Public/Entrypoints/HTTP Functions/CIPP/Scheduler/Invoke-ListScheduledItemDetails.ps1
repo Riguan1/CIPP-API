@@ -23,7 +23,7 @@ function Invoke-ListScheduledItemDetails {
 
     # Retrieve the task information
     $TaskTable = Get-CIPPTable -TableName 'ScheduledTasks'
-    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp
+    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp, Trigger
 
     if (-not $Task) {
         return ([HttpResponseContext]@{
@@ -81,6 +81,18 @@ function Invoke-ListScheduledItemDetails {
         $Task.Tenant = $TenantForDisplay
     }
 
+    if ($Task.Trigger) {
+        try {
+            $TriggerObject = $Task.Trigger | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($TriggerObject) {
+                $Task | Add-Member -NotePropertyName Trigger -NotePropertyValue $TriggerObject -Force
+            }
+        } catch {
+            Write-Warning "Failed to parse trigger information for task $($Task.RowKey): $($_.Exception.Message)"
+            # Fall back to keeping original trigger value
+        }
+    }
+
     # Get the results if available
     $ResultsTable = Get-CIPPTable -TableName 'ScheduledTaskResults'
     $ResultsFilter = "PartitionKey eq '$RowKey'"
@@ -107,7 +119,7 @@ function Invoke-ListScheduledItemDetails {
                     }
                 } catch {
                     # If JSON parsing fails, use raw value
-                    Write-LogMessage -API $APIName -message "Error parsing Task.Results as JSON: $_" -Sev 'Warning'
+                    Write-LogMessage -API $APIName -message "Error parsing Task.Results as JSON: $_" -sev 'Warn'
                     $ResultData = $Task.Results
                 }
             } else {
@@ -143,7 +155,7 @@ function Invoke-ListScheduledItemDetails {
                         try {
                             $ParsedResults = $Result.Results | ConvertFrom-Json -ErrorAction Stop
                         } catch {
-                            Write-LogMessage -API $APIName -message "Failed to parse result as JSON: $_" -Sev 'Warning'
+                            Write-LogMessage -API $APIName -message "Failed to parse result as JSON: $_" -sev 'Warn'
                             # On failure, keep as string
                             $ParsedResults = $Result.Results
                         }

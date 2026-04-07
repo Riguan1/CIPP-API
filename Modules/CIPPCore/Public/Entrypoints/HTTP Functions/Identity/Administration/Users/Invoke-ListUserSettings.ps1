@@ -20,6 +20,9 @@ function Invoke-ListUserSettings {
             $UserSettings = $UserSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
         } catch {
             Write-Warning "Failed to convert UserSettings JSON: $($_.Exception.Message)"
+        }
+
+        if (!$UserSettings) {
             $UserSettings = [pscustomobject]@{
                 direction      = 'ltr'
                 paletteMode    = 'light'
@@ -36,9 +39,19 @@ function Invoke-ListUserSettings {
         try {
             $UserSpecificSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'"
             $UserSpecificSettings = $UserSpecificSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
-        }
-        catch {
+        } catch {
             Write-Warning "Failed to convert UserSpecificSettings JSON: $($_.Exception.Message)"
+        }
+
+        # Get user bookmarks
+        try {
+            $UserBookmarks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserBookmarks' and RowKey eq '$Username'"
+            $UserBookmarks = $UserBookmarks.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+            if ($UserBookmarks -and $UserBookmarks -isnot [System.Array]) {
+                $UserBookmarks = @($UserBookmarks)
+            }
+        } catch {
+            Write-Warning "Failed to convert UserBookmarks JSON: $($_.Exception.Message)"
         }
 
         #Get branding settings
@@ -52,6 +65,10 @@ function Invoke-ListUserSettings {
 
         if ($UserSpecificSettings) {
             $UserSettings | Add-Member -MemberType NoteProperty -Name 'UserSpecificSettings' -Value $UserSpecificSettings -Force | Out-Null
+        }
+
+        if ($UserBookmarks) {
+            $UserSettings | Add-Member -MemberType NoteProperty -Name 'UserBookmarks' -Value $UserBookmarks -Force | Out-Null
         }
 
         $StatusCode = [HttpStatusCode]::OK
