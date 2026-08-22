@@ -11,6 +11,8 @@ function Start-UserTasksOrchestrator {
         $TaskId = $null
     )
 
+    try { [CIPP.TestDataCache]::ClearExpired() } catch { Write-Information "TestDataCache clearexpired skipped: $($_.Exception.Message)" }
+
     $Table = Get-CippTable -tablename 'ScheduledTasks'
 
     if ($TaskId) {
@@ -26,11 +28,12 @@ function Start-UserTasksOrchestrator {
         }
     } else {
         $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        $24HoursAgo = (Get-Date).AddHours(-24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        # Pending = orchestrator queued, Running = actively executing
-        # Pick up: Planned, Failed-Planned, stuck Pending (>24hr), or stuck Running (>4hr for large AllTenants tasks)
-        $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$24HoursAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
-        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        $1HourAgo = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        # Pending = orchestrator claimed but executor not yet started, Running = actively executing
+        # Pick up: Planned, Failed-Planned, stuck Pending (>1hr - orphaned claim), or stuck Running/Processing (>4hr for large AllTenants tasks)
+        $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$1HourAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
+        # Disabled is filtered client side: an OData comparison excludes rows that lack the property, which is every task created before the flag existed
+        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Disabled -ne $true }
     }
 
     $Batch = [System.Collections.Generic.List[object]]::new()
@@ -61,8 +64,48 @@ function Start-UserTasksOrchestrator {
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
                 if (!$task.Parameters) { $task.Parameters = @{} }
 
+                if ($task.Command -in (Get-CIPPSchedulerBlockedCommands)) {
+                    Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Blocked execution of restricted command '$($task.Command)' in task $($task.Name)" -Sev 'Warning'
+                    $null = Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey = $task.PartitionKey
+                        RowKey       = $task.RowKey
+                        Results      = "Task blocked: '$($task.Command)' is not permitted to run as a scheduled task."
+                        TaskState    = 'Failed'
+                    }
+                    continue
+                }
+
                 # Cache Get-Command result to avoid repeated expensive reflection calls
-                $CommandInfo = Get-Command $task.Command
+                $CommandInfo = Get-Command -Name $task.Command -ErrorAction SilentlyContinue
+                if (-not $CommandInfo) {
+                    # Resolve the required module from standardised command name patterns
+                    $ModuleToImport = switch -Wildcard ($task.Command) {
+                        'Invoke-CIPPStandard*' { 'CIPPStandards' }
+                        'Get-CIPPAlert*' { 'CIPPAlerts' }
+                        default { $null }
+                    }
+
+                    if ($ModuleToImport) {
+                        Write-Information "Command '$($task.Command)' not found. Attempting import of '$ModuleToImport' module."
+                        $ImportedModule = $false
+                        try {
+                            if (-not (Get-Module -Name $ModuleToImport)) {
+                                Import-Module $ModuleToImport -ErrorAction Stop
+                                $ImportedModule = $true
+                                Write-Information "Imported module '$ModuleToImport' for command resolution retry."
+                            }
+                            $CommandInfo = Get-Command -Name $task.Command -ErrorAction Stop
+                        } catch {
+                            throw "Unable to resolve command '$($task.Command)' for scheduled task '$($task.Name)' after importing '$ModuleToImport'. $($_.Exception.Message)"
+                        } finally {
+                            if ($ImportedModule) {
+                                Remove-Module $ModuleToImport -ErrorAction SilentlyContinue
+                            }
+                        }
+                    } else {
+                        throw "Command '$($task.Command)' not found and no module could be resolved from the command name for scheduled task '$($task.Name)'."
+                    }
+                }
                 $HasTenantFilter = $CommandInfo.Parameters.ContainsKey('TenantFilter')
 
                 $ScheduledCommand = [pscustomobject]@{
@@ -73,7 +116,14 @@ function Start-UserTasksOrchestrator {
                 }
 
                 if ($task.Tenant -eq 'AllTenants') {
-                    $ExcludedTenants = $task.excludedTenants -split ','
+                    $ExcludedTenants = @($task.excludedTenants -split ',' | Where-Object { $_ })
+                    if ($task.excludedTenantGroups) {
+                        # Expand excluded tenant groups at runtime so membership changes are honored
+                        $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        if ($ExcludedGroups) {
+                            $ExcludedTenants = @($ExcludedTenants + (Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ })
+                        }
+                    }
                     Write-Host "Excluded Tenants from this task: $ExcludedTenants"
                     $AllTenantCommands = foreach ($Tenant in $TenantList | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
                         $NewParams = $task.Parameters.Clone()
@@ -89,7 +139,7 @@ function Start-UserTasksOrchestrator {
                             FunctionName = 'ExecScheduledCommand'
                         }
                     }
-                    $Batch.AddRange($AllTenantCommands)
+                    $Batch.AddRange(@($AllTenantCommands))
                 } elseif ($task.TenantGroup) {
                     # Handle tenant groups - expand group to individual tenants
                     try {
@@ -106,7 +156,14 @@ function Start-UserTasksOrchestrator {
                         # Expand the tenant group to individual tenants
                         $ExpandedTenants = Expand-CIPPTenantGroups -TenantFilter $TenantFilterForExpansion
 
-                        $ExcludedTenants = $task.excludedTenants -split ','
+                        $ExcludedTenants = @($task.excludedTenants -split ',' | Where-Object { $_ })
+                        if ($task.excludedTenantGroups) {
+                            # Expand excluded tenant groups at runtime so membership changes are honored
+                            $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
+                            if ($ExcludedGroups) {
+                                $ExcludedTenants = @($ExcludedTenants + (Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ })
+                            }
+                        }
                         Write-Host "Excluded Tenants from this task: $ExcludedTenants"
 
                         $GroupTenantCommands = foreach ($ExpandedTenant in $ExpandedTenants | Where-Object { $_.value -notin $ExcludedTenants }) {
@@ -123,7 +180,7 @@ function Start-UserTasksOrchestrator {
                                 FunctionName = 'ExecScheduledCommand'
                             }
                         }
-                        $Batch.AddRange($GroupTenantCommands)
+                        $Batch.AddRange(@($GroupTenantCommands))
                     } catch {
                         Write-Host "Error expanding tenant group: $($_.Exception.Message)"
                         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to expand tenant group for task $($task.Name): $($_.Exception.Message)" -sev Error
@@ -194,11 +251,15 @@ function Start-UserTasksOrchestrator {
                     OrchestratorName = "UserTaskOrchestrator_$TenantName"
                     Batch            = $BatchWithQueue
                     SkipLog          = $true
+                    # User band: scheduled/run-now tasks must not queue behind P4 background fan-outs.
+                    # Explicit because the starter jobs that invoke this function expose no ambient
+                    # priority to inherit. Child orchestrations (e.g. OffboardingUser_*) inherit this.
+                    Priority         = 2
                 }
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Single-Tenant Tasks Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Single-tenant orchestrator started for $TenantName with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start single-tenant orchestrator for $TenantName : $($_.Exception.Message)"
@@ -243,6 +304,8 @@ function Start-UserTasksOrchestrator {
                     OrchestratorName = "UserTaskOrchestrator_$($ParentTask.Name)"
                     Batch            = @($AllBatchItems)
                     SkipLog          = $true
+                    # User band - see the single-tenant orchestrator above.
+                    Priority         = 2
                     PostExecution    = @{
                         FunctionName = 'ScheduledTaskPostExecution'
                         Parameters   = @{
@@ -257,7 +320,7 @@ function Start-UserTasksOrchestrator {
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Multi-Tenant Task Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Multi-tenant orchestrator started for $($ParentTask.Name) with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start multi-tenant orchestrator for $($ParentTask.Name): $($_.Exception.Message)"
