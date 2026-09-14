@@ -1,0 +1,1065 @@
+<title>Cbw-wegwijzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --paper:#f5f7f9; --card:#ffffff; --card-2:#fafbfc;
+  --ink:#151a21; --ink-2:#4b5560; --ink-3:#727e8b;
+  --line:#dce1e8; --line-2:#eaeef3;
+  --accent:#1f4a8f; --accent-2:#2c63b8; --accent-soft:#e7eefa;
+  --ok:#1a7a55; --ok-soft:#e2f1ea;
+  --warn:#96620f; --warn-soft:#faefda;
+  --crit:#a8322c; --crit-soft:#fae7e5;
+  --nvt:#727e8b; --nvt-soft:#edf0f3;
+  --shadow:0 1px 2px rgba(20,26,34,.05), 0 10px 26px -18px rgba(20,26,34,.35);
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f1319; --card:#161b23; --card-2:#1b212a;
+    --ink:#e9edf3; --ink-2:#aeb9c6; --ink-3:#8793a1;
+    --line:#29313c; --line-2:#212831;
+    --accent:#7aa6ec; --accent-2:#9cbcf3; --accent-soft:#1a2739;
+    --ok:#4fbf8d; --ok-soft:#142c23;
+    --warn:#d6a047; --warn-soft:#2c2415;
+    --crit:#e2736b; --crit-soft:#2e1a19;
+    --nvt:#8793a1; --nvt-soft:#1e242d;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f1319; --card:#161b23; --card-2:#1b212a;
+  --ink:#e9edf3; --ink-2:#aeb9c6; --ink-3:#8793a1;
+  --line:#29313c; --line-2:#212831;
+  --accent:#7aa6ec; --accent-2:#9cbcf3; --accent-soft:#1a2739;
+  --ok:#4fbf8d; --ok-soft:#142c23;
+  --warn:#d6a047; --warn-soft:#2c2415;
+  --crit:#e2736b; --crit-soft:#2e1a19;
+  --nvt:#8793a1; --nvt-soft:#1e242d;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -18px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Source Serif 4", Georgia, "Times New Roman", serif;
+  font-size:16px; line-height:1.55; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,button,label,th,.ui{font-family:Archivo, "Helvetica Neue", Arial, sans-serif}
+h1,h2,h3{text-wrap:balance; margin:0}
+.mono{font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace}
+a{color:var(--accent-2)}
+
+/* ---------- kop ---------- */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  background:color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.topbar-in{
+  max-width:1180px; margin:0 auto; padding:10px 20px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:baseline; gap:10px; margin-right:auto; min-width:0}
+.brand b{font-family:Archivo; font-weight:700; font-size:17px; letter-spacing:-.01em; white-space:nowrap}
+.brand .wet{
+  font-family:"IBM Plex Mono", monospace; font-size:11px; color:var(--ink-3);
+  letter-spacing:.02em; white-space:nowrap;
+}
+.meter{display:flex; align-items:center; gap:10px}
+.meter-track{
+  width:132px; height:7px; border-radius:99px; background:var(--line-2);
+  overflow:hidden; border:1px solid var(--line);
+}
+.meter-fill{height:100%; width:0%; background:var(--accent); transition:width .45s cubic-bezier(.22,.8,.3,1)}
+.meter-num{font-family:"IBM Plex Mono", monospace; font-size:13px; font-variant-numeric:tabular-nums; font-weight:600}
+.saved{font-family:Archivo; font-size:11.5px; color:var(--ink-3); min-width:92px; text-align:right}
+
+/* ---------- raster ---------- */
+.shell{max-width:1180px; margin:0 auto; padding-block:26px 80px; padding-inline:20px;
+  display:grid; grid-template-columns:214px minmax(0,1fr); gap:34px; align-items:start}
+@media (max-width:920px){ .shell{grid-template-columns:minmax(0,1fr); gap:20px} }
+
+/* ---------- rail ---------- */
+.rail{position:sticky; top:72px}
+.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+.rail a{
+  font-family:Archivo; font-size:13.5px; font-weight:500; text-decoration:none; color:var(--ink-2);
+  display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:7px; border-left:2px solid transparent;
+}
+.rail a:hover{background:var(--card); color:var(--ink)}
+.rail a.on{background:var(--card); color:var(--ink); border-left-color:var(--accent); box-shadow:var(--shadow)}
+.rail .st{font-family:"IBM Plex Mono", monospace; font-size:11px; color:var(--ink-3); width:14px}
+.rail-foot{margin-top:18px; padding:12px 10px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:7px}
+@media (max-width:920px){
+  .rail{position:static; overflow-x:auto; margin-inline:-20px; padding-inline:20px}
+  .rail ol{flex-direction:row; gap:6px; width:max-content}
+  .rail a{border-left:none; border-bottom:2px solid transparent; white-space:nowrap; background:var(--card)}
+  .rail a.on{border-left:none; border-bottom-color:var(--accent)}
+  .rail-foot{flex-direction:row; flex-wrap:wrap; border-top:none; padding-inline:0}
+}
+
+/* ---------- secties ---------- */
+main{display:flex; flex-direction:column; gap:28px; min-width:0}
+section{scroll-margin-top:78px}
+.sec-head{display:flex; align-items:flex-start; gap:12px; margin-bottom:12px}
+.sec-num{
+  font-family:"IBM Plex Mono", monospace; font-size:11px; font-weight:600; color:var(--accent);
+  background:var(--accent-soft); border-radius:5px; padding:3px 7px; margin-top:4px; white-space:nowrap;
+}
+.sec-head h2{font-size:22px; font-weight:700; letter-spacing:-.015em; line-height:1.25}
+.sec-head p{margin:3px 0 0; color:var(--ink-2); font-size:15px; max-width:62ch}
+
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+.pad{padding:18px}
+.flow > * + *{margin-top:12px}
+
+/* ---------- dossier ---------- */
+.dossier{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; padding:18px}
+.field{display:flex; flex-direction:column; gap:5px; min-width:0}
+.field label{font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-3)}
+input[type=text], input[type=number], input[type=date], select, textarea{
+  font-family:Archivo; font-size:14px; color:var(--ink); background:var(--card-2);
+  border:1px solid var(--line); border-radius:7px; padding:8px 10px; width:100%;
+}
+textarea{font-family:"Source Serif 4", serif; resize:vertical; min-height:38px}
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible{
+  outline:2px solid var(--accent); outline-offset:1px;
+}
+.demo-badge{
+  display:inline-flex; align-items:center; gap:6px; font-family:Archivo; font-size:11.5px; font-weight:600;
+  color:var(--warn); background:var(--warn-soft); border:1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+  padding:4px 9px; border-radius:99px;
+}
+
+/* ---------- knoppen ---------- */
+button{font-size:13px; font-weight:600; cursor:pointer; border-radius:7px; border:1px solid var(--line);
+  background:var(--card); color:var(--ink-2); padding:7px 11px}
+button:hover{color:var(--ink); border-color:var(--ink-3)}
+button.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+:root[data-theme="dark"] button.primary, :root:not([data-theme="light"]) button.primary{color:#0f1319}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]) button.primary{color:#fff} }
+button.primary:hover{background:var(--accent-2); border-color:var(--accent-2)}
+.btnrow{display:flex; flex-wrap:wrap; gap:8px}
+
+/* ---------- uitkomst scope ---------- */
+.verdict{display:flex; gap:16px; align-items:flex-start; padding:18px; border-left:4px solid var(--accent)}
+.verdict .vtag{
+  font-family:Archivo; font-weight:700; font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+  padding:5px 10px; border-radius:6px; white-space:nowrap;
+}
+.v-ess{background:var(--crit-soft); color:var(--crit)}
+.v-bel{background:var(--warn-soft); color:var(--warn)}
+.v-uit{background:var(--nvt-soft); color:var(--nvt)}
+.v-onb{background:var(--accent-soft); color:var(--accent)}
+.verdict h3{font-size:17px; font-weight:700; margin-bottom:4px}
+.verdict p{margin:0; color:var(--ink-2); font-size:15px}
+.verdict dl{display:grid; grid-template-columns:auto 1fr; gap:4px 12px; margin:12px 0 0; font-size:14px}
+.verdict dt{font-family:Archivo; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--ink-3); padding-top:3px}
+.verdict dd{margin:0; color:var(--ink-2)}
+.uitz{display:flex; flex-direction:column; gap:7px; margin-top:4px}
+.uitz label{display:flex; gap:9px; align-items:flex-start; font-family:"Source Serif 4",serif; font-size:14.5px;
+  color:var(--ink-2); cursor:pointer; text-transform:none; letter-spacing:0; font-weight:400}
+.uitz input{margin-top:5px; accent-color:var(--accent); flex-shrink:0}
+
+/* ---------- verplichtingen ---------- */
+.plichten{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px}
+.plicht{padding:16px; display:flex; flex-direction:column; gap:9px}
+.plicht h4{font-size:14.5px; font-weight:700; display:flex; align-items:center; gap:8px}
+.plicht p{margin:0; font-size:14.5px; color:var(--ink-2)}
+.plicht .deadline{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3); letter-spacing:.01em}
+
+/* ---------- zorgplicht ---------- */
+.thema{overflow:hidden}
+.thema-head{display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--line-2);
+  background:var(--card-2); flex-wrap:wrap}
+.letter{
+  font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:15px; color:var(--accent);
+  width:28px; height:28px; display:grid; place-items:center; border:1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius:6px; background:var(--accent-soft); flex-shrink:0;
+}
+.thema-head h3{font-size:15.5px; font-weight:600; margin-right:auto; letter-spacing:-.005em}
+.thema-pct{font-family:"IBM Plex Mono",monospace; font-size:12px; font-variant-numeric:tabular-nums; color:var(--ink-3)}
+.thema-bar{width:64px; height:5px; border-radius:99px; background:var(--line-2); overflow:hidden; flex-shrink:0}
+.thema-bar i{display:block; height:100%; background:var(--ok); width:0%; transition:width .35s}
+
+.ctrl{display:grid; grid-template-columns:1fr auto; gap:10px 16px; padding:13px 18px; border-bottom:1px solid var(--line-2)}
+.ctrl:last-child{border-bottom:none}
+.ctrl.prio1{border-left:3px solid var(--crit); padding-left:15px}
+.ctrl-txt{min-width:0}
+.ctrl-txt p{margin:0; font-size:15px; line-height:1.45}
+.ctrl-hint{
+  margin-top:5px !important; font-family:Archivo; font-size:12.5px; color:var(--ink-3);
+  display:flex; gap:7px; align-items:baseline;
+}
+.ctrl-hint b{color:var(--accent); font-weight:600; white-space:nowrap; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase}
+.kern{font-family:Archivo; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--crit); background:var(--crit-soft); padding:2px 6px; border-radius:4px; margin-left:7px; vertical-align:2px}
+.seg{display:flex; gap:3px; align-self:start; background:var(--line-2); padding:3px; border-radius:8px; height:fit-content}
+.seg button{border:none; background:transparent; padding:4px 9px; font-size:11.5px; border-radius:5px; color:var(--ink-3)}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--card); box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg button[data-s="geregeld"][aria-pressed="true"]{color:var(--ok)}
+.seg button[data-s="deels"][aria-pressed="true"]{color:var(--warn)}
+.seg button[data-s="open"][aria-pressed="true"]{color:var(--crit)}
+.seg button[data-s="nvt"][aria-pressed="true"]{color:var(--nvt)}
+.notitie{grid-column:1/-1}
+.addnote{font-family:Archivo; font-size:12px; font-weight:500; color:var(--ink-3); background:none;
+  border:none; padding:2px 0; border-bottom:1px dashed var(--line)}
+.addnote:hover{color:var(--accent); border-bottom-color:var(--accent)}
+.zp-stand{display:flex; align-items:center; gap:9px; margin-top:auto; padding-top:4px}
+.zp-stand .meter-track{width:auto; flex:1}
+
+/* ---------- actielijst ---------- */
+.actie{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:baseline;
+  padding:12px 18px; border-bottom:1px solid var(--line-2)}
+.actie:last-child{border-bottom:none}
+.actie .ref{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3); white-space:nowrap}
+.actie .wat{font-size:15px}
+.actie .wat small{display:block; color:var(--ink-3); font-family:Archivo; font-size:12.5px; margin-top:2px}
+.pil{font-family:Archivo; font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  padding:3px 8px; border-radius:99px; white-space:nowrap}
+.p-open{background:var(--crit-soft); color:var(--crit)}
+.p-deels{background:var(--warn-soft); color:var(--warn)}
+.p-ok{background:var(--ok-soft); color:var(--ok)}
+.leeg{padding:26px 18px; text-align:center; color:var(--ink-3); font-size:15px}
+
+/* ---------- tijdlijn meldplicht ---------- */
+.tl{position:relative; padding:6px 18px 18px}
+.tl::before{content:""; position:absolute; left:calc(18px + 43px); top:16px; bottom:26px; width:2px; background:var(--line)}
+.tl-item{display:grid; grid-template-columns:88px 1fr; gap:16px; padding:12px 0; position:relative}
+.tl-klok{font-family:"IBM Plex Mono",monospace; font-size:12.5px; font-weight:600; color:var(--crit); text-align:right;
+  padding-top:2px; position:relative}
+.tl-klok::after{content:""; position:absolute; right:-24px; top:6px; width:9px; height:9px; border-radius:99px;
+  background:var(--card); border:2px solid var(--crit)}
+.tl-item:nth-child(n+3) .tl-klok{color:var(--warn)}
+.tl-item:nth-child(n+3) .tl-klok::after{border-color:var(--warn)}
+.tl-item:last-child .tl-klok{color:var(--ink-3)}
+.tl-item:last-child .tl-klok::after{border-color:var(--ink-3)}
+.tl-body h4{font-size:14.5px; font-weight:700; margin-bottom:3px}
+.tl-body p{margin:0; font-size:14.5px; color:var(--ink-2)}
+.tl-body ul{margin:6px 0 0; padding-left:18px; font-size:14.5px; color:var(--ink-2)}
+
+/* ---------- voet ---------- */
+.disclaimer{font-size:13.5px; color:var(--ink-3); max-width:70ch; line-height:1.5}
+.disclaimer a{color:var(--ink-3)}
+.bronnen{display:flex; flex-wrap:wrap; gap:6px 14px; font-family:Archivo; font-size:12.5px; margin-top:8px}
+
+@media (max-width:560px){
+  .ctrl{grid-template-columns:1fr}
+  .seg{align-self:stretch}
+  .seg button{flex:1}
+  .actie{grid-template-columns:1fr auto}
+  .actie .ref{grid-column:1/-1}
+  .tl::before{display:none}
+  .tl-item{grid-template-columns:1fr; gap:4px}
+  .tl-klok{text-align:left}
+  .tl-klok::after{display:none}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
+
+@media print{
+  .topbar, .rail, .seg, .btnrow, .no-print{display:none !important}
+  .shell{display:block; max-width:none; padding:0}
+  body{background:#fff; font-size:11pt}
+  .card{box-shadow:none; break-inside:avoid}
+  section{break-inside:avoid; margin-bottom:14pt}
+}
+</style>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <b>Cbw-wegwijzer</b>
+      <span class="wet">Cyberbeveiligingswet &middot; van kracht sinds 15-08-2026</span>
+    </div>
+    <div class="meter" title="Aandeel zorgplichtmaatregelen dat geregeld is">
+      <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
+      <span class="meter-num" id="meterNum">0%</span>
+    </div>
+    <span class="saved" id="saveState">&nbsp;</span>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" aria-label="Stappen">
+    <ol>
+      <li><a href="#dossier" class="on"><span class="st">00</span> Dossier</a></li>
+      <li><a href="#scope"><span class="st">01</span> Valt u eronder?</a></li>
+      <li><a href="#plichten"><span class="st">02</span> Uw verplichtingen</a></li>
+      <li><a href="#zorgplicht"><span class="st">03</span> Zorgplicht-check</a></li>
+      <li><a href="#actielijst"><span class="st">04</span> Wat u moet regelen</a></li>
+      <li><a href="#melden"><span class="st">05</span> Incident melden</a></li>
+    </ol>
+    <div class="rail-foot no-print">
+      <button type="button" id="btnPrint">Print / PDF</button>
+      <button type="button" id="btnExport">Exporteer JSON</button>
+      <button type="button" id="btnImport">Importeer JSON</button>
+      <input type="file" id="fileImport" accept="application/json,.json" hidden>
+      <button type="button" id="btnWis">Dossier leegmaken</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- 00 DOSSIER -->
+    <section id="dossier">
+      <div class="sec-head">
+        <span class="sec-num">00</span>
+        <div>
+          <h2>Dossier</h2>
+          <p>Eén dossier per organisatie. Iedereen met deze link ziet dezelfde ingevulde stand — deel de link dus alleen met de klant zelf.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="dossier">
+          <div class="field"><label for="orgNaam">Organisatie</label><input type="text" id="orgNaam" placeholder="Naam van de klant"></div>
+          <div class="field"><label for="orgContact">Verantwoordelijke</label><input type="text" id="orgContact" placeholder="Naam en rol"></div>
+          <div class="field"><label for="orgDatum">Peildatum</label><input type="date" id="orgDatum"></div>
+        </div>
+        <div class="pad" style="border-top:1px solid var(--line-2); padding-top:12px" id="demoRij">
+          <span class="demo-badge">Voorbeelddossier — overschrijf met uw eigen gegevens</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 01 SCOPE -->
+    <section id="scope">
+      <div class="sec-head">
+        <span class="sec-num">01</span>
+        <div>
+          <h2>Valt u onder de wet?</h2>
+          <p>De Cbw kent achttien sectoren en twee categorieën. De categorie bepaalt niet wát u moet doen — de eisen zijn gelijk — maar wél hoe de toezichthouder langskomt.</p>
+        </div>
+      </div>
+      <div class="card flow pad">
+        <div class="dossier" style="padding:0">
+          <div class="field" style="grid-column:1/-1">
+            <label for="selSector">Sector</label>
+            <select id="selSector"></select>
+          </div>
+          <div class="field"><label for="numFte">Medewerkers (fte)</label><input type="number" id="numFte" min="0" step="1" placeholder="bv. 80"></div>
+          <div class="field"><label for="numOmzet">Jaaromzet (&euro; mln)</label><input type="number" id="numOmzet" min="0" step="0.1" placeholder="bv. 14"></div>
+          <div class="field"><label for="numBalans">Balanstotaal (&euro; mln)</label><input type="number" id="numBalans" min="0" step="0.1" placeholder="bv. 9"></div>
+        </div>
+        <div class="uitz" id="uitzBox"></div>
+      </div>
+      <div class="card verdict" id="verdictCard" style="margin-top:14px">
+        <span class="vtag v-onb" id="vTag">Onbekend</span>
+        <div style="min-width:0">
+          <h3 id="vTitel">Kies eerst een sector</h3>
+          <p id="vUitleg">Zodra sector en omvang bekend zijn, bepaalt de wegwijzer of u essentiële of belangrijke entiteit bent.</p>
+          <dl id="vDetails"></dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 VERPLICHTINGEN -->
+    <section id="plichten">
+      <div class="sec-head">
+        <span class="sec-num">02</span>
+        <div>
+          <h2>Uw verplichtingen</h2>
+          <p>Vier blokken. Er is geen gedoogperiode: registratie, zorgplicht en meldplicht gelden sinds 15 augustus 2026 onverkort.</p>
+        </div>
+      </div>
+      <div class="plichten" id="plichtenBox"></div>
+    </section>
+
+    <!-- 03 ZORGPLICHT -->
+    <section id="zorgplicht">
+      <div class="sec-head">
+        <span class="sec-num">03</span>
+        <div>
+          <h2>Zorgplicht-check</h2>
+          <p>De tien maatregelen uit artikel 21 lid 2 NIS2, hier vertaald naar controles die u in een Microsoft&nbsp;365-omgeving daadwerkelijk kunt aantonen. Rood gestreepte regels zijn de punten waar een toezichthouder als eerste naar vraagt.</p>
+        </div>
+      </div>
+      <div class="flow" id="themasBox"></div>
+    </section>
+
+    <!-- 04 ACTIELIJST -->
+    <section id="actielijst">
+      <div class="sec-head">
+        <span class="sec-num">04</span>
+        <div>
+          <h2>Wat u moet regelen</h2>
+          <p>Alles wat hierboven op <em>niet geregeld</em> of <em>deels</em> staat, op volgorde van urgentie. Dit is het blad dat u meeneemt naar het gesprek met de klant.</p>
+        </div>
+      </div>
+      <div class="card" id="actieBox"></div>
+    </section>
+
+    <!-- 05 MELDEN -->
+    <section id="melden">
+      <div class="sec-head">
+        <span class="sec-num">05</span>
+        <div>
+          <h2>Incident melden</h2>
+          <p>Een significant incident meldt u bij het CSIRT (NCSC) én bij uw toezichthouder. De klok begint te lopen zodra u zich bewust bent van het incident — niet zodra het is opgelost.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tl">
+          <div class="tl-item">
+            <div class="tl-klok">&le; 24 uur</div>
+            <div class="tl-body">
+              <h4>Vroegtijdige waarschuwing</h4>
+              <p>Een eerste signaal, geen compleet verhaal. Vermeld of u vermoedt dat het incident is veroorzaakt door een onrechtmatige of kwaadwillige handeling en of er grensoverschrijdende gevolgen kunnen zijn.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-klok">&le; 72 uur</div>
+            <div class="tl-body">
+              <h4>Incidentmelding</h4>
+              <p>Werk de waarschuwing bij met een eerste beoordeling van aard, ernst en impact, en — voor zover bekend — de indicatoren van compromittering.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-klok">op verzoek</div>
+            <div class="tl-body">
+              <h4>Tussentijds verslag</h4>
+              <p>Loopt het incident nog? Dan kan het CSIRT of de toezichthouder om een tussenstand vragen. Dit is geen vaste verplichting, maar reken erop bij een langlopende casus.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-klok">&le; 1 maand</div>
+            <div class="tl-body">
+              <h4>Eindverslag</h4>
+              <p>Uiterlijk een maand na de incidentmelding.</p>
+              <ul>
+                <li>een gedetailleerde beschrijving van het incident, inclusief ernst en gevolgen;</li>
+                <li>het soort dreiging of de grondoorzaak die het incident waarschijnlijk heeft veroorzaakt;</li>
+                <li>de getroffen en lopende risicobeperkende maatregelen;</li>
+                <li>eventuele grensoverschrijdende gevolgen.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="pad" style="border-top:1px solid var(--line-2)">
+          <p style="margin:0; font-size:14.5px; color:var(--ink-2)">
+            <strong>Vooraf regelen, niet tijdens:</strong> wie mag melden, via welk account bij <span class="mono">mijn.ncsc.nl</span>, wie de klant informeert en welk kanaal u gebruikt als e-mail plat ligt. Een meldplicht die u tijdens een ransomware-incident moet uitzoeken, haalt de 24 uur niet.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="colofon">
+      <div class="card pad">
+        <p class="disclaimer">
+          <strong>Let op.</strong> Deze wegwijzer is een hulpmiddel om het gesprek te structureren, geen juridisch advies en geen formele toets. De uitkomst van stap 01 is een indicatie: bijzondere gevallen (enige aanbieder van een dienst, aanwijzing door een minister, sectorale <em>lex specialis</em> zoals DORA voor de financiële sector) kunnen anders uitpakken. Toetst u de uitkomst altijd bij de bron en bij uw toezichthouder.
+        </p>
+        <div class="bronnen">
+          <a href="https://www.ncsc.nl/cyberbeveiligingswet-nis2" target="_blank" rel="noopener">NCSC &mdash; Cyberbeveiligingswet</a>
+          <a href="https://www.nctv.nl/onderwerpen/c/cyberbeveiligingswet" target="_blank" rel="noopener">NCTV &mdash; Cyberbeveiligingswet</a>
+          <a href="https://www.rdi.nl/onderwerpen/cyberveiligheid/cyberbeveiligingswet/meldplicht" target="_blank" rel="noopener">RDI &mdash; Meldplicht</a>
+          <a href="https://www.digitaleoverheid.nl/overzicht-van-alle-onderwerpen/cyberbeveiligingswet/verplichtingen-cyberbeveiligingswet/" target="_blank" rel="noopener">Digitale Overheid &mdash; Verplichtingen</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   GEGEVENS
+   ============================================================ */
+const SECTOREN = [
+  {id:"energie",      naam:"Energie (elektriciteit, warmte, olie, gas, waterstof)", bijlage:"I",  toezicht:"Ministerie van Klimaat en Groene Groei / RDI"},
+  {id:"transport",    naam:"Transport (lucht, spoor, water, weg)",                  bijlage:"I",  toezicht:"Inspectie Leefomgeving en Transport (ILT)"},
+  {id:"bank",         naam:"Bankwezen",                                             bijlage:"I",  toezicht:"De Nederlandsche Bank &mdash; let op DORA als lex specialis"},
+  {id:"financieel",   naam:"Infrastructuur voor de financi&euml;le markt",          bijlage:"I",  toezicht:"AFM / DNB &mdash; let op DORA als lex specialis"},
+  {id:"zorg",         naam:"Gezondheidszorg",                                       bijlage:"I",  toezicht:"Sectorale toezichthouder zorg (via VWS)"},
+  {id:"drinkwater",   naam:"Drinkwater",                                            bijlage:"I",  toezicht:"Inspectie Leefomgeving en Transport (ILT)"},
+  {id:"afvalwater",   naam:"Afvalwater",                                            bijlage:"I",  toezicht:"Inspectie Leefomgeving en Transport (ILT)"},
+  {id:"digiinfra",    naam:"Digitale infrastructuur (DNS, TLD, cloud, datacenter, CDN, telecom, vertrouwensdiensten)", bijlage:"I", toezicht:"Rijksinspectie Digitale Infrastructuur (RDI)"},
+  {id:"ictbeheer",    naam:"Beheer van ICT-diensten B2B (MSP en MSSP)",             bijlage:"I",  toezicht:"Rijksinspectie Digitale Infrastructuur (RDI)"},
+  {id:"overheid",     naam:"Overheid",                                              bijlage:"I",  toezicht:"RDI (rijk en decentraal, m.u.v. waterschappen)"},
+  {id:"ruimtevaart",  naam:"Ruimtevaart",                                           bijlage:"I",  toezicht:"Sectorale toezichthouder (via EZ)"},
+  {id:"post",         naam:"Post- en koeriersdiensten",                             bijlage:"II", toezicht:"Autoriteit Consument &amp; Markt"},
+  {id:"afval",        naam:"Afvalstoffenbeheer",                                    bijlage:"II", toezicht:"Inspectie Leefomgeving en Transport (ILT)"},
+  {id:"chemie",       naam:"Chemie (vervaardiging, productie, distributie)",        bijlage:"II", toezicht:"Sectorale toezichthouder (via I&amp;W)"},
+  {id:"voedsel",      naam:"Levensmiddelen (productie, verwerking, distributie)",   bijlage:"II", toezicht:"Nederlandse Voedsel- en Warenautoriteit"},
+  {id:"productie",    naam:"Vervaardiging (medische hulpmiddelen, elektronica, machines, voertuigen)", bijlage:"II", toezicht:"Sectorale toezichthouder (via EZ)"},
+  {id:"digiaanbod",   naam:"Digitale aanbieders (marktplaatsen, zoekmachines, sociale netwerken)", bijlage:"II", toezicht:"Rijksinspectie Digitale Infrastructuur (RDI)"},
+  {id:"onderzoek",    naam:"Onderzoek (onderzoeksorganisaties)",                    bijlage:"II", toezicht:"Sectorale toezichthouder (via OCW)"}
+];
+
+const UITZONDERINGEN = [
+  {id:"telecom",  tekst:"Wij bieden openbare elektronische communicatienetwerken of -diensten aan (telecom, internettoegang)."},
+  {id:"dns",      tekst:"Wij zijn DNS-dienstverlener, TLD-registry, registrar of aanbieder van vertrouwensdiensten."},
+  {id:"enige",    tekst:"Wij zijn in Nederland de enige aanbieder van een dienst die essentieel is voor maatschappelijke of economische activiteiten."},
+  {id:"rijk",     tekst:"Wij zijn een onderdeel van de rijksoverheid of een aangewezen overheidsinstantie."},
+  {id:"aanwijs",  tekst:"Wij zijn door een minister of toezichthouder aangewezen als entiteit onder de Cbw."}
+];
+
+/* Zorgplicht: artikel 21 lid 2 sub a t/m j */
+const THEMAS = [
+  {letter:"a", naam:"Risicoanalyse en beveiligingsbeleid", controls:[
+    {id:"a1", prio:1, tekst:"Er is een vastgesteld informatiebeveiligingsbeleid dat door het bestuur is goedgekeurd en gedateerd."},
+    {id:"a2", prio:1, tekst:"Er ligt een actuele risicoanalyse, minimaal jaarlijks herzien, met benoemde eigenaren per risico."},
+    {id:"a3", prio:0, tekst:"De scope is vastgelegd: welke diensten, systemen en locaties vallen onder de Cbw-verplichting?"},
+    {id:"a4", prio:0, tekst:"De assetinventarisatie is compleet en actueel: tenants, servers, endpoints, netwerkapparatuur en SaaS.", hint:"CIPP-tenantoverzicht, Intune-apparaatinventaris, Entra-app­registraties"}
+  ]},
+  {letter:"b", naam:"Incidentbehandeling", controls:[
+    {id:"b1", prio:1, tekst:"Er is een incidentresponsplan met rollen, escalatiepaden en telefoonnummers die buiten kantooruren werken."},
+    {id:"b2", prio:1, tekst:"Detectie en alertering zijn belegd en worden ook 's nachts en in het weekend opgevolgd.", hint:"Defender XDR-incidenten, waarschuwingsbeleid, CIPP-waarschuwingen"},
+    {id:"b3", prio:0, tekst:"Incidenten worden geregistreerd in één logboek, inclusief tijdstip van ontdekking (de start van de 24-uursklok)."},
+    {id:"b4", prio:0, tekst:"Het plan is minimaal eenmaal per jaar geoefend, met een schriftelijke terugblik."},
+    {id:"b5", prio:1, tekst:"Auditlogging staat aan en wordt lang genoeg bewaard om een incident achteraf te reconstrueren.", hint:"Purview-auditlog, bewaartermijn en licentieniveau controleren"}
+  ]},
+  {letter:"c", naam:"Bedrijfscontinu&iuml;teit, back-ups en crisisbeheer", controls:[
+    {id:"c1", prio:1, tekst:"Er zijn back-ups van de Microsoft 365-data (mail, SharePoint, OneDrive, Teams) buiten de tenant.", hint:"De prullenbak van Microsoft 365 is geen back-up"},
+    {id:"c2", prio:1, tekst:"Er is aantoonbaar een herstel getest, met datum en uitkomst van de laatste restoretest."},
+    {id:"c3", prio:0, tekst:"Er is een continu&iuml;teits- en herstelplan met een RTO en RPO per kritieke dienst."},
+    {id:"c4", prio:0, tekst:"Er is een crisisteam met vaste rollen en een bereikbaarheidsregeling buiten kantooruren."}
+  ]},
+  {letter:"d", naam:"Beveiliging van de toeleveringsketen", controls:[
+    {id:"d1", prio:1, tekst:"Er is een leveranciersregister met per leverancier de kritikaliteit en de toegang die zij hebben."},
+    {id:"d2", prio:0, tekst:"Beveiligingseisen staan in contracten en verwerkersovereenkomsten, inclusief recht op controle."},
+    {id:"d3", prio:0, tekst:"Leveranciers worden periodiek beoordeeld (ISO 27001, SOC 2 of een eigen vragenlijst)."},
+    {id:"d4", prio:1, tekst:"Leveranciers zijn contractueel verplicht incidenten binnen 24 uur te melden — u haalt anders uw eigen termijn niet."},
+    {id:"d5", prio:0, tekst:"Beheerderstoegang van leveranciers loopt via tijdelijke, herleidbare accounts.", hint:"GDAP, PIM, toegang met just-in-time-verhoging"}
+  ]},
+  {letter:"e", naam:"Verwerving, ontwikkeling en onderhoud &mdash; inclusief kwetsbaarhedenbeheer", controls:[
+    {id:"e1", prio:1, tekst:"Er is een patchbeleid met harde termijnen per risicoklasse, en de naleving wordt gemeten.", hint:"Intune-updateringen, kwetsbaarhedenbeheer in Defender"},
+    {id:"e2", prio:1, tekst:"Extern benaderbare systemen worden periodiek gescand op kwetsbaarheden."},
+    {id:"e3", prio:0, tekst:"Er is een gepubliceerd beleid voor gecoördineerde kwetsbaarhedenmelding (CVD) met een meldadres."},
+    {id:"e4", prio:0, tekst:"Er is een hardening-baseline en er wordt gemeten hoeveel systemen ervan afwijken.", hint:"CIPP-standaarden, Microsoft security baselines, CIS"},
+    {id:"e5", prio:0, tekst:"Nieuwe leveranciers en software worden vóór ingebruikname op beveiliging beoordeeld."}
+  ]},
+  {letter:"f", naam:"Beoordelen of de maatregelen werken", controls:[
+    {id:"f1", prio:0, tekst:"Er is minimaal jaarlijks een interne audit of self-assessment op de zorgplicht."},
+    {id:"f2", prio:0, tekst:"Er zijn meetbare indicatoren: MFA-dekking, patchachterstand, back-upsucces, phishingscore.", hint:"Secure Score is een startpunt, geen bewijs op zichzelf"},
+    {id:"f3", prio:1, tekst:"Het bestuur bespreekt de uitkomsten en legt besluiten en acties vast — dit is het bewijs van bestuurlijke betrokkenheid."},
+    {id:"f4", prio:0, tekst:"Kritieke diensten zijn getest met een pentest, met opvolging van de bevindingen."}
+  ]},
+  {letter:"g", naam:"Cyberhygi&euml;ne en opleiding", controls:[
+    {id:"g1", prio:1, tekst:"Bestuurders volgen aantoonbaar scholing over cyberrisico's — een expliciete eis uit de wet, geen aanbeveling."},
+    {id:"g2", prio:1, tekst:"Alle medewerkers krijgen minimaal jaarlijks bewustwordingstraining, met deelnameregistratie."},
+    {id:"g3", prio:0, tekst:"Er worden phishingsimulaties gedaan en de resultaten worden opgevolgd.", hint:"Aanvalssimulatietraining in Defender for Office 365"},
+    {id:"g4", prio:0, tekst:"Er is beleid voor thuiswerken, eigen apparatuur en het gebruik van privé-accounts voor werk."}
+  ]},
+  {letter:"h", naam:"Cryptografie en versleuteling", controls:[
+    {id:"h1", prio:0, tekst:"Er is vastgelegd beleid over welke versleuteling waar wordt toegepast."},
+    {id:"h2", prio:1, tekst:"Alle laptops en werkstations zijn volledig versleuteld en dat is centraal aantoonbaar.", hint:"BitLocker- en FileVault-rapportage in Intune"},
+    {id:"h3", prio:0, tekst:"Verouderde protocollen zijn uitgezet; TLS wordt afgedwongen op mail en webdiensten."},
+    {id:"h4", prio:0, tekst:"Sleutel- en herstelsleutelbeheer is belegd, inclusief wie erbij kan en hoe dat wordt gelogd."}
+  ]},
+  {letter:"i", naam:"Personeel, toegangsbeleid en beheer van bedrijfsmiddelen", controls:[
+    {id:"i1", prio:1, tekst:"Bij uitdiensttreding worden accounts en sessies dezelfde dag ingetrokken.", hint:"CIPP-offboardingwizard: sessies intrekken, doorsturen, licenties verwijderen"},
+    {id:"i2", prio:1, tekst:"Het aantal permanente beheerdersaccounts is bekend en zo klein mogelijk; beheer gebeurt met aparte accounts.", hint:"Entra PIM, telling van global admins in CIPP"},
+    {id:"i3", prio:0, tekst:"Toegangsrechten worden minimaal halfjaarlijks doorgelicht en overbodige rechten ingetrokken.", hint:"Entra-toegangsbeoordelingen"},
+    {id:"i4", prio:0, tekst:"Voor kritieke functies vindt screening plaats (VOG of gelijkwaardig)."},
+    {id:"i5", prio:0, tekst:"Gastaccounts en gedeelde accounts zijn geïnventariseerd en hebben een eigenaar."}
+  ]},
+  {letter:"j", naam:"Meervoudige authenticatie en beveiligde communicatie", controls:[
+    {id:"j1", prio:1, tekst:"Alle gebruikers gebruiken MFA, bij voorkeur phishingbestendig (passkey, FIDO2, certificaat).", hint:"Voorwaardelijke toegang, verificatiemethoden in Entra, CIPP-MFA-rapport"},
+    {id:"j2", prio:1, tekst:"Voor alle beheerdersaccounts is MFA verplicht, zonder uitzonderingen of noodluiken zonder toezicht."},
+    {id:"j3", prio:1, tekst:"Verouderde authenticatie is geblokkeerd en dat is geverifieerd in de aanmeldlogboeken."},
+    {id:"j4", prio:0, tekst:"Er is een beveiligd noodcommunicatiekanaal dat werkt als de eigen omgeving plat ligt — en het is getest."},
+    {id:"j5", prio:0, tekst:"Break-glass-accounts bestaan, zijn uitgezonderd van beleid dat hen kan buitensluiten, en worden bewaakt."}
+  ]}
+];
+
+const PLICHTEN = [
+  {id:"registratie", titel:"Registratieplicht", deadline:"Geldt sinds 15 augustus 2026",
+   tekst:"Registreer de organisatie in het entiteitenregister via mijn.ncsc.nl: gegevens van de organisatie, contactpersonen en de netwerk- en informatiesystemen die de dienst dragen. Wijzigingen geeft u door."},
+  {id:"zorgplicht", titel:"Zorgplicht", deadline:"Doorlopend", berekend:true,
+   tekst:"Passende en evenredige technische, operationele en organisatorische maatregelen. De tien maatregelen in stap 03 zijn de wettelijke ondergrens — evenredig aan uw risico, omvang en de impact van uitval."},
+  {id:"meldplicht", titel:"Meldplicht", deadline:"24 uur / 72 uur / 1 maand",
+   tekst:"Significante incidenten meldt u bij het CSIRT en bij uw toezichthouder. Regel vooraf wie mag melden en hoe — zie stap 05."},
+  {id:"bestuur", titel:"Bestuurlijke verantwoordelijkheid", deadline:"Doorlopend",
+   tekst:"Het bestuur keurt de maatregelen goed, ziet toe op de uitvoering en volgt zelf scholing. Bij nalatigheid kan de toezichthouder bestuurders aanspreken; bij essenti&euml;le entiteiten kan zelfs een tijdelijk bestuursverbod volgen."}
+];
+
+const STATUSSEN = [
+  {id:"geregeld", label:"Geregeld"},
+  {id:"deels",    label:"Deels"},
+  {id:"open",     label:"Niet"},
+  {id:"nvt",      label:"N.v.t."}
+];
+
+const VOORBEELD = {
+  versie:1, demo:true,
+  org:{naam:"", contact:"", datum:""},
+  scope:{sector:"ictbeheer", fte:"80", omzet:"14", balans:"9", uitz:[]},
+  plichten:{registratie:"open", meldplicht:"deels", bestuur:"open"},
+  antwoorden:{
+    a1:{status:"deels"}, a4:{status:"geregeld"},
+    b1:{status:"open"}, b2:{status:"geregeld"}, b5:{status:"deels"},
+    c1:{status:"geregeld"}, c2:{status:"open", notitie:"Nog nooit een restoretest gedaan."},
+    d1:{status:"open"}, d4:{status:"open"},
+    e1:{status:"deels"}, e4:{status:"geregeld"},
+    g1:{status:"open", notitie:"Bestuur is nog niet ingepland voor scholing."},
+    h2:{status:"geregeld"},
+    i1:{status:"geregeld"}, i2:{status:"deels"},
+    j1:{status:"geregeld"}, j2:{status:"geregeld"}, j3:{status:"deels"}
+  },
+  bijgewerkt:0
+};
+
+/* ============================================================
+   TOESTAND
+   ============================================================ */
+const LS = "cbw-wegwijzer-dossier";
+let state = leegDossier();
+let db = null, dbDoc = null, downloads = null;
+let saveTimer = null, remoteEcho = 0;
+
+function leegDossier(){
+  return {versie:1, demo:false,
+    org:{naam:"", contact:"", datum:""},
+    scope:{sector:"", fte:"", omzet:"", balans:"", uitz:[]},
+    plichten:{registratie:"open", meldplicht:"open", bestuur:"open"},
+    antwoorden:{}, bijgewerkt:0};
+}
+function kloon(o){ return JSON.parse(JSON.stringify(o)); }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+const $ = s => document.querySelector(s);
+
+/* ============================================================
+   SCOPEBEPALING
+   ============================================================ */
+function bepaalScope(){
+  const sc = state.scope;
+  const sector = SECTOREN.find(s => s.id === sc.sector);
+  if(!sector) return {klasse:"onbekend"};
+
+  const fte = parseFloat(sc.fte), omzet = parseFloat(sc.omzet), balans = parseFloat(sc.balans);
+  const heeftOmvang = !isNaN(fte) || !isNaN(omzet);
+  const uitz = sc.uitz || [];
+
+  // Uitzonderingen: in scope ongeacht omvang.
+  const ongeachtOmvang = uitz.length > 0;
+  const zwareUitz = uitz.includes("telecom") || uitz.includes("dns") || uitz.includes("enige") || uitz.includes("rijk");
+
+  const groot  = (!isNaN(fte) && fte >= 250) || (!isNaN(omzet) && omzet > 50 && !isNaN(balans) && balans > 43);
+  const middel = !groot && ((!isNaN(fte) && fte >= 50) || (!isNaN(omzet) && omzet > 10));
+
+  if(!heeftOmvang && !ongeachtOmvang) return {klasse:"onbekend", sector};
+  if(!groot && !middel && !ongeachtOmvang) return {klasse:"buiten", sector};
+
+  let klasse;
+  if(sector.bijlage === "I" && (groot || zwareUitz)) klasse = "essentieel";
+  else klasse = "belangrijk";
+
+  return {klasse, sector, groot, middel, ongeachtOmvang, zwareUitz};
+}
+
+const VERDICT_TEKST = {
+  essentieel:{
+    tag:"Essenti&euml;le entiteit", cls:"v-ess",
+    titel:"U bent naar alle waarschijnlijkheid een essenti&euml;le entiteit",
+    uitleg:"Registratieplicht, zorgplicht en meldplicht gelden onverkort. Het toezicht is <strong>proactief</strong>: de toezichthouder kan uit zichzelf informatie opvragen, audits eisen en inspecties uitvoeren, ook zonder dat er iets is misgegaan. De boete kan oplopen tot &euro;&nbsp;10 miljoen of 2% van de wereldwijde jaaromzet — het hoogste bedrag telt."
+  },
+  belangrijk:{
+    tag:"Belangrijke entiteit", cls:"v-bel",
+    titel:"U bent naar alle waarschijnlijkheid een belangrijke entiteit",
+    uitleg:"Dezelfde registratieplicht, zorgplicht en meldplicht als een essenti&euml;le entiteit. Het verschil zit in het toezicht: dat is <strong>reactief</strong> — de toezichthouder komt in beeld na een incident of een signaal. De boete kan oplopen tot &euro;&nbsp;7 miljoen of 1,4% van de wereldwijde jaaromzet."
+  },
+  buiten:{
+    tag:"Vermoedelijk buiten scope", cls:"v-uit",
+    titel:"U valt op basis van sector en omvang vermoedelijk niet rechtstreeks onder de Cbw",
+    uitleg:"Dat betekent niet dat u niets hoeft te doen. Klanten die w&eacute;l onder de wet vallen, moeten hun keten beveiligen (maatregel <span class='mono'>d</span>) en zullen eisen bij u neerleggen: beveiligingsafspraken in het contract, aantoonbare maatregelen en incidentmelding binnen 24 uur. De zorgplicht-check hieronder is dan uw voorbereiding op die vragen."
+  },
+  onbekend:{
+    tag:"Onbekend", cls:"v-onb",
+    titel:"Vul sector en omvang in",
+    uitleg:"Zodra sector en omvang bekend zijn, bepaalt de wegwijzer of u essenti&euml;le of belangrijke entiteit bent."
+  }
+};
+
+function tekenVerdict(){
+  const r = bepaalScope();
+  const t = VERDICT_TEKST[r.klasse];
+  const card = $("#verdictCard");
+  const tag = $("#vTag");
+  tag.className = "vtag " + t.cls;
+  tag.innerHTML = t.tag;
+  $("#vTitel").innerHTML = t.titel;
+  $("#vUitleg").innerHTML = t.uitleg;
+  card.style.borderLeftColor = r.klasse === "essentieel" ? "var(--crit)"
+    : r.klasse === "belangrijk" ? "var(--warn)"
+    : r.klasse === "buiten" ? "var(--nvt)" : "var(--accent)";
+
+  const dl = $("#vDetails");
+  if(!r.sector){ dl.innerHTML = ""; return; }
+  const rijen = [
+    ["Sector", r.sector.naam],
+    ["Bijlage", r.sector.bijlage === "I" ? "I &mdash; sector van hoge kritikaliteit" : "II &mdash; overige kritieke sector"],
+    ["Toezichthouder", r.sector.toezicht + " <span style='opacity:.7'>(indicatief)</span>"],
+    ["CSIRT", "NCSC &mdash; melden via mijn.ncsc.nl"]
+  ];
+  if(r.ongeachtOmvang) rijen.push(["Let op", "U gaf een bijzonder geval op: dan geldt de wet ongeacht uw omvang."]);
+  dl.innerHTML = rijen.map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function tekenSector(){
+  const sel = $("#selSector");
+  sel.innerHTML = '<option value="">— kies een sector —</option>' +
+    ["I","II"].map(b => `<optgroup label="Bijlage ${b} — ${b==="I"?"hoge kritikaliteit":"overige kritieke sectoren"}">` +
+      SECTOREN.filter(s => s.bijlage===b).map(s => `<option value="${s.id}">${s.naam}</option>`).join("") +
+      `</optgroup>`).join("");
+
+  $("#uitzBox").innerHTML = "<label style='font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);display:block;margin-bottom:2px'>Bijzondere gevallen — vink aan wat van toepassing is</label>" +
+    UITZONDERINGEN.map(u => `<label><input type="checkbox" data-uitz="${u.id}"> <span>${u.tekst}</span></label>`).join("");
+}
+
+function tekenPlichten(){
+  $("#plichtenBox").innerHTML = PLICHTEN.map(p => {
+    const st = state.plichten[p.id] || "open";
+    const staart = p.berekend
+      ? `<div class="zp-stand">
+           <div class="meter-track"><div class="meter-fill" data-zpbar></div></div>
+           <span class="meter-num" data-zppct>0%</span>
+         </div>
+         <span class="deadline" style="margin-top:-4px">volgt uit stap 03</span>`
+      : `<div class="seg no-print" data-plicht="${p.id}" role="group" aria-label="Status ${p.titel}">
+           ${STATUSSEN.map(s => `<button type="button" data-s="${s.id}" aria-pressed="${st===s.id}">${s.label}</button>`).join("")}
+         </div>`;
+    return `<div class="card plicht">
+      <h4>${p.titel}</h4>
+      <span class="deadline">${p.deadline}</span>
+      <p>${p.tekst}</p>
+      ${staart}
+    </div>`;
+  }).join("");
+}
+
+function tekenThemas(){
+  $("#themasBox").innerHTML = THEMAS.map(t => `
+    <div class="card thema" id="thema-${t.letter}">
+      <div class="thema-head">
+        <span class="letter">${t.letter}</span>
+        <h3>${t.naam}</h3>
+        <div class="thema-bar"><i data-bar="${t.letter}"></i></div>
+        <span class="thema-pct" data-pct="${t.letter}">—</span>
+      </div>
+      ${t.controls.map(c => {
+        const a = state.antwoorden[c.id] || {};
+        const st = a.status || "";
+        return `<div class="ctrl ${c.prio?"prio1":""}">
+          <div class="ctrl-txt">
+            <p>${c.tekst}${c.prio?'<span class="kern">kern</span>':""}</p>
+            ${c.hint?`<p class="ctrl-hint"><b>Aantonen</b> <span>${c.hint}</span></p>`:""}
+          </div>
+          <div class="seg no-print" data-ctrl="${c.id}" role="group" aria-label="Status maatregel">
+            ${STATUSSEN.map(s => `<button type="button" data-s="${s.id}" aria-pressed="${st===s.id}">${s.label}</button>`).join("")}
+          </div>
+          <div class="notitie">
+            <button type="button" class="addnote no-print" data-addnote="${c.id}"${a.notitie?" hidden":""}>+ notitie of bewijsstuk</button>
+            <textarea id="notitie-${c.id}" data-notitie="${c.id}" rows="1" placeholder="Notitie of bewijsstuk"${a.notitie?"":" hidden"}>${esc(a.notitie||"")}</textarea>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>`).join("");
+}
+
+function tekenActielijst(){
+  const items = [];
+  PLICHTEN.forEach(p => {
+    if(p.berekend) return;
+    const st = state.plichten[p.id] || "open";
+    if(st === "geregeld" || st === "nvt") return;
+    items.push({ref:"Stap 02", wat:p.titel, sub:p.deadline, status:st, prio:1});
+  });
+  THEMAS.forEach(t => t.controls.forEach(c => {
+    const st = (state.antwoorden[c.id]||{}).status;
+    if(st === "geregeld" || st === "nvt") return;
+    const notitie = (state.antwoorden[c.id]||{}).notitie;
+    items.push({
+      ref:`art. 21.2 ${t.letter}`,
+      wat:c.tekst,
+      sub: notitie ? esc(notitie) : (c.hint || t.naam),
+      status: st || "open",
+      prio: c.prio ? 1 : 0
+    });
+  }));
+  const rang = i => (i.prio ? 0 : 2) + (i.status === "open" ? 0 : 1);
+  items.sort((x,y) => rang(x) - rang(y));
+
+  const open = items.filter(i => i.prio === 1).length;
+  const box = $("#actieBox");
+  if(!items.length){
+    box.innerHTML = `<div class="leeg">Niets open. Alles staat op <strong>geregeld</strong> of <strong>n.v.t.</strong> — leg de onderbouwing vast, want bij toezicht telt wat u kunt aantonen.</div>`;
+    return;
+  }
+  box.innerHTML =
+    `<div class="pad" style="border-bottom:1px solid var(--line-2);display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">
+       <strong style="font-family:Archivo;font-size:14px">${items.length} openstaande punten</strong>
+       <span style="font-family:Archivo;font-size:13px;color:var(--ink-3)">waarvan <strong style="color:var(--crit)">${open}</strong> kernpunten waar een toezichthouder als eerste naar vraagt</span>
+     </div>` +
+    items.map(i => `<div class="actie">
+      <span class="ref mono">${i.ref}</span>
+      <span class="wat">${i.wat}<small>${i.sub}</small></span>
+      <span class="pil ${i.status==="deels"?"p-deels":"p-open"}">${i.status==="deels"?"deels":"niet geregeld"}</span>
+    </div>`).join("");
+}
+
+function tekenVoortgang(){
+  let tot = 0, som = 0;
+  THEMAS.forEach(t => {
+    let tTot = 0, tSom = 0;
+    t.controls.forEach(c => {
+      const st = (state.antwoorden[c.id]||{}).status;
+      if(st === "nvt") return;
+      tTot++;
+      if(st === "geregeld") tSom += 1;
+      else if(st === "deels") tSom += 0.5;
+    });
+    tot += tTot; som += tSom;
+    const pct = tTot ? Math.round((tSom/tTot)*100) : 0;
+    const bar = document.querySelector(`[data-bar="${t.letter}"]`);
+    const lbl = document.querySelector(`[data-pct="${t.letter}"]`);
+    if(bar){
+      bar.style.width = pct + "%";
+      bar.style.background = pct >= 80 ? "var(--ok)" : pct >= 40 ? "var(--warn)" : "var(--crit)";
+    }
+    if(lbl) lbl.textContent = pct + "%";
+  });
+  const pct = tot ? Math.round((som/tot)*100) : 0;
+  $("#meterFill").style.width = pct + "%";
+  $("#meterFill").style.background = pct >= 80 ? "var(--ok)" : pct >= 40 ? "var(--warn)" : "var(--crit)";
+  $("#meterNum").textContent = pct + "%";
+  const zpBar = document.querySelector("[data-zpbar]"), zpPct = document.querySelector("[data-zppct]");
+  if(zpBar){ zpBar.style.width = pct + "%"; zpBar.style.background = $("#meterFill").style.background; }
+  if(zpPct) zpPct.textContent = pct + "% geregeld";
+}
+
+function tekenAlles(){
+  tekenVerdict();
+  tekenActielijst();
+  tekenVoortgang();
+  $("#demoRij").style.display = state.demo ? "" : "none";
+}
+
+function vulFormulier(){
+  $("#orgNaam").value = state.org.naam || "";
+  $("#orgContact").value = state.org.contact || "";
+  $("#orgDatum").value = state.org.datum || "";
+  $("#selSector").value = state.scope.sector || "";
+  $("#numFte").value = state.scope.fte ?? "";
+  $("#numOmzet").value = state.scope.omzet ?? "";
+  $("#numBalans").value = state.scope.balans ?? "";
+  document.querySelectorAll("[data-uitz]").forEach(cb => {
+    cb.checked = (state.scope.uitz||[]).includes(cb.dataset.uitz);
+  });
+  tekenPlichten();
+  tekenThemas();
+  tekenAlles();
+}
+
+/* ============================================================
+   OPSLAG
+   ============================================================ */
+function meldOpslag(tekst){ $("#saveState").textContent = tekst; }
+
+function bewaar(){
+  state.bijgewerkt = Date.now();
+  try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){}
+  clearTimeout(saveTimer);
+  meldOpslag("opslaan…");
+  saveTimer = setTimeout(async () => {
+    if(dbDoc){
+      try{
+        remoteEcho = state.bijgewerkt;
+        await dbDoc.set(kloon(state));
+        meldOpslag("gedeeld opgeslagen");
+      }catch(e){ meldOpslag("alleen lokaal"); }
+    } else {
+      meldOpslag("lokaal opgeslagen");
+    }
+  }, 700);
+}
+
+function wijzig(fn){ fn(); state.demo = false; bewaar(); tekenAlles(); }
+
+async function startOpslag(){
+  try{
+    const raw = localStorage.getItem(LS);
+    if(raw){ const d = JSON.parse(raw); if(d && d.versie) state = Object.assign(leegDossier(), d); }
+  }catch(e){}
+  if(!localStorage.getItem(LS)) state = kloon(VOORBEELD);
+  vulFormulier();
+  meldOpslag(dbDoc ? "" : "lokaal opgeslagen");
+
+  if(!window.claude || !window.claude.use) return;
+  try{
+    db = await window.claude.use("db");
+    downloads = await window.claude.use("downloads");
+  }catch(e){ return; }
+  if(!db) return;
+  dbDoc = db.doc("dossier/main");
+  try{
+    const snap = await dbDoc.get();
+    const data = snap && (snap.data ? (typeof snap.data === "function" ? snap.data() : snap.data) : snap);
+    if(data && data.versie && (data.bijgewerkt||0) > (state.bijgewerkt||0)){
+      state = Object.assign(leegDossier(), data);
+      vulFormulier();
+    } else if(!data || !data.versie){
+      if(!state.demo) await dbDoc.set(kloon(state));
+    }
+    meldOpslag("gedeeld dossier");
+  }catch(e){ meldOpslag("alleen lokaal"); }
+
+  try{
+    dbDoc.onSnapshot(snap => {
+      const data = snap && (snap.data ? (typeof snap.data === "function" ? snap.data() : snap.data) : snap);
+      if(!data || !data.versie) return;
+      if((data.bijgewerkt||0) <= (state.bijgewerkt||0)) return;
+      if((data.bijgewerkt||0) === remoteEcho) return;
+      const tag = document.activeElement && document.activeElement.tagName;
+      if(tag === "INPUT" || tag === "TEXTAREA") return;
+      state = Object.assign(leegDossier(), data);
+      vulFormulier();
+      meldOpslag("bijgewerkt");
+    });
+  }catch(e){}
+}
+
+/* ============================================================
+   INTERACTIE
+   ============================================================ */
+function koppel(){
+  $("#orgNaam").addEventListener("input", e => wijzig(() => state.org.naam = e.target.value));
+  $("#orgContact").addEventListener("input", e => wijzig(() => state.org.contact = e.target.value));
+  $("#orgDatum").addEventListener("input", e => wijzig(() => state.org.datum = e.target.value));
+  $("#selSector").addEventListener("change", e => wijzig(() => state.scope.sector = e.target.value));
+  ["numFte","numOmzet","numBalans"].forEach(id => {
+    const key = {numFte:"fte", numOmzet:"omzet", numBalans:"balans"}[id];
+    $("#"+id).addEventListener("input", e => wijzig(() => state.scope[key] = e.target.value));
+  });
+
+  document.addEventListener("change", e => {
+    const cb = e.target.closest("[data-uitz]");
+    if(!cb) return;
+    wijzig(() => {
+      const set = new Set(state.scope.uitz || []);
+      cb.checked ? set.add(cb.dataset.uitz) : set.delete(cb.dataset.uitz);
+      state.scope.uitz = [...set];
+    });
+  });
+
+  document.addEventListener("click", e => {
+    const knop = e.target.closest(".seg button");
+    if(!knop) return;
+    const seg = knop.closest(".seg");
+    const nieuw = knop.dataset.s;
+    wijzig(() => {
+      if(seg.dataset.ctrl){
+        const id = seg.dataset.ctrl;
+        const huidig = (state.antwoorden[id]||{}).status;
+        state.antwoorden[id] = Object.assign({}, state.antwoorden[id], {status: huidig === nieuw ? "" : nieuw});
+      } else if(seg.dataset.plicht){
+        const id = seg.dataset.plicht;
+        state.plichten[id] = state.plichten[id] === nieuw ? "open" : nieuw;
+      }
+    });
+    seg.querySelectorAll("button").forEach(b => {
+      const actief = seg.dataset.ctrl
+        ? (state.antwoorden[seg.dataset.ctrl]||{}).status === b.dataset.s
+        : state.plichten[seg.dataset.plicht] === b.dataset.s;
+      b.setAttribute("aria-pressed", actief ? "true" : "false");
+    });
+  });
+
+  document.addEventListener("click", e => {
+    const knop = e.target.closest("[data-addnote]");
+    if(!knop) return;
+    const ta = document.getElementById("notitie-" + knop.dataset.addnote);
+    knop.hidden = true; ta.hidden = false; ta.focus();
+  });
+
+  document.addEventListener("focusout", e => {
+    const ta = e.target.closest("[data-notitie]");
+    if(!ta || ta.value.trim()) return;
+    ta.hidden = true;
+    const knop = document.querySelector(`[data-addnote="${ta.dataset.notitie}"]`);
+    if(knop) knop.hidden = false;
+  });
+
+  document.addEventListener("input", e => {
+    const ta = e.target.closest("[data-notitie]");
+    if(!ta) return;
+    const id = ta.dataset.notitie;
+    wijzig(() => { state.antwoorden[id] = Object.assign({}, state.antwoorden[id], {notitie: ta.value}); });
+  });
+
+  // Rail: markeer de zichtbare sectie.
+  const secties = [...document.querySelectorAll("main section[id]")];
+  const links = [...document.querySelectorAll(".rail a")];
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if(!en.isIntersecting) return;
+      links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id));
+    });
+  }, {rootMargin:"-70px 0px -70% 0px"});
+  secties.forEach(s => io.observe(s));
+
+  $("#btnPrint").addEventListener("click", () => window.print());
+  $("#btnWis").addEventListener("click", () => {
+    if(!confirm("Het hele dossier leegmaken? Dit geldt ook voor iedereen die deze link open heeft.")) return;
+    state = leegDossier();
+    bewaar(); vulFormulier();
+  });
+
+  $("#btnExport").addEventListener("click", async () => {
+    const naam = (state.org.naam || "dossier").replace(/[^\w\s-]/g,"").trim().replace(/\s+/g,"-").toLowerCase();
+    const bestand = `cbw-${naam || "dossier"}-${new Date().toISOString().slice(0,10)}.json`;
+    const tekst = JSON.stringify(state, null, 2);
+    if(downloads){
+      try{ await downloads.save({filename:bestand, data:tekst}); meldOpslag("ge&euml;xporteerd"); return; }
+      catch(err){ if(err && err.code === "cancelled") return; }
+    }
+    try{
+      const url = URL.createObjectURL(new Blob([tekst], {type:"application/json"}));
+      const a = document.createElement("a");
+      a.href = url; a.download = bestand; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }catch(err){
+      alert("Exporteren lukt niet in deze weergave. Gebruik Print / PDF voor een deelbaar overzicht.");
+    }
+  });
+
+  $("#btnImport").addEventListener("click", () => $("#fileImport").click());
+  $("#fileImport").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try{
+        const d = JSON.parse(r.result);
+        if(!d || !d.versie) throw new Error("geen dossier");
+        state = Object.assign(leegDossier(), d);
+        state.demo = false;
+        bewaar(); vulFormulier();
+        meldOpslag("ge&iuml;mporteerd");
+      }catch(err){
+        alert("Dit bestand is geen Cbw-dossier. Kies een JSON-bestand dat met de knop Exporteren is gemaakt.");
+      }
+    };
+    r.readAsText(f);
+    e.target.value = "";
+  });
+}
+
+/* ============================================================
+   START
+   ============================================================ */
+function start(){
+  tekenSector();
+  koppel();
+  startOpslag();
+  if(window.claude && window.claude.hot && window.claude.hot.snapshot){
+    window.claude.hot.snapshot(() => ({state}));
+  }
+}
+start();
+</script>
