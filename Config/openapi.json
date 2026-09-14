@@ -39745,6 +39745,54 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListCbwReadiness": {
+        "get": {
+            "summary": "ListCbwReadiness",
+            "operationId": "ListCbwReadiness",
+            "tags": [
+                "Tenant > Reports"
+            ],
+            "description": "Returns what a tenant can actually prove against the duty of care of the Dutch Cyberbeveiligingswet\n(the NIS2 implementation, in force since 15 August 2026).\n\nEach result maps a live signal from Microsoft 365 onto a control of NIS2 art. 21(2), using the control\nidentifiers of the Cbw-wegwijzer in Tools/CbwWegwijzer. The wegwijzer imports this response to pre-fill\nits self-assessment, so a customer sees what is already in place instead of answering from memory.\n\nControls that Microsoft 365 cannot prove - backups outside the tenant, supplier contracts, board\ntraining - are returned under NotDetectable with the reason. They stay a manual answer by design: a\nmissing signal must never read as a passing one.\n\nQuery parameters:\n  - tenantFilter: The tenant to inspect. Required. AllTenants is rejected; this report is too\n                  Graph-heavy to fan out in a single request.",
+            "parameters": [
+                {
+                    "name": "tenantFilter",
+                    "in": "query",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Success",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Cbw readiness report: TenantFilter, GeneratedAt, Summary, Controls (ControlId / Article / Status / Headline / Detail / Source / Metric) and NotDetectable (ControlId / Article / Reason)."
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Bad request - missing required field or invalid input"
+                },
+                "401": {
+                    "description": "Unauthorized - invalid or missing bearer token"
+                },
+                "403": {
+                    "description": "Forbidden - caller lacks the required RBAC role"
+                }
+            },
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "x-cipp-role": "Tenant.Reports.Read"
+        }
+    },
     "/api/ListCheckExtAlerts": {
       "get": {
         "summary": "ListCheckExtAlerts",

@@ -23,6 +23,55 @@ Controles die een toezichthouder als eerste opvraagt zijn gemarkeerd als
 **kern**. Waar een controle in Microsoft 365 aantoonbaar is, staat erbij waar je
 het bewijs vandaan haalt (Intune, Entra, Defender, Purview, CIPP).
 
+## Koppeling met CIPP
+
+Stap 03 kan zichzelf vullen uit een echte tenant. Het endpoint
+`GET /api/ListCbwReadiness?tenantFilter=<tenant>` (rol `Tenant.Reports.Read`) leest de tenant uit en
+geeft per controle een oordeel terug met het bewijs erbij:
+
+```jsonc
+{
+  "TenantFilter": "klant.onmicrosoft.com",
+  "GeneratedAt":  "2026-09-14T09:12:44.0000000Z",
+  "Controls": [
+    { "ControlId": "j2", "Article": "art. 21.2 j", "Status": "geregeld",
+      "Headline": "6 van 6 beheerders (100%) kan MFA gebruiken",
+      "Source": "Entra ID - userRegistrationDetails",
+      "Metric": { "Value": 6, "Total": 6, "Percentage": 100 } }
+  ],
+  "NotDetectable": [
+    { "ControlId": "c1", "Reason": "Of er back-ups buiten de tenant staan, is niet uit Microsoft 365 af te leiden." }
+  ]
+}
+```
+
+Wat het uitleest: MFA-dekking van gebruikers en beheerders, phishingbestendige methoden, blokkade van
+verouderde authenticatie, uitzonderingen op voorwaardelijke toegang, aantal permanente global admins,
+schijfversleuteling, apparaatnaleving, slapende gelicentieerde accounts, gastaccounts,
+toegangsbeoordelingen, het uniforme auditlogboek, toegepaste CIPP-standaarden en Secure Score.
+
+Wat het niet uitleest, en ook niet vóórinvult: back-ups buiten de tenant, restoretests,
+leveranciersafspraken, CVD-beleid, bestuursscholing en noodcommunicatie. Die komen terug onder
+`NotDetectable` met de reden erbij, zodat een ontbrekend signaal nooit als een geslaagde controle leest.
+
+Twee routes vanaf de webapp:
+
+1. **Rechtstreeks ophalen** — vul de basis-URL van CIPP en de tenant in en klik *Stand ophalen*. Dit
+   werkt zodra de pagina op een domein draait dat CIPP in zijn CORS-instellingen toestaat en waar de
+   gebruiker is ingelogd. Vanaf een gepubliceerd artifact op `claude.ai` is dat standaard níet zo.
+2. **Rapport importeren** — roep het endpoint in CIPP aan, bewaar het antwoord als JSON en klik
+   *Rapport importeren*. Werkt altijd, ongeacht domein.
+
+Een handmatig antwoord wint altijd van een bevinding uit CIPP; de app markeert het dan als *handmatig
+overschreven*. De app slaat geen tokens of inloggegevens op — alleen de basis-URL en de tenantnaam.
+
+## Buiten scope is geen leeg scherm
+
+Valt een klant niet onder de wet, dan blijft de hele check staan en verandert alleen de framing: de
+actielijst wordt een nulmeting op volgorde van risico in plaats van urgentie. Dat is precies het
+antwoord op de leveranciersvragenlijsten die klanten die er wél onder vallen gaan versturen — hun
+ketenverplichting (maatregel `d`) wordt andermans huiswerk.
+
 ## Draaien
 
 Eén bestand, geen build en geen afhankelijkheden:

@@ -208,6 +208,35 @@ button.primary:hover{background:var(--accent-2); border-color:var(--accent-2)}
 .seg button[data-s="open"][aria-pressed="true"]{color:var(--crit)}
 .seg button[data-s="nvt"][aria-pressed="true"]{color:var(--nvt)}
 .notitie{grid-column:1/-1}
+/* bewijsregel uit CIPP */
+.bewijs{grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:baseline; gap:8px;
+  margin:0; padding:8px 11px; border-radius:7px; font-size:13.5px; line-height:1.4;
+  background:var(--nvt-soft); border-left:3px solid var(--nvt)}
+.bewijs b{font-family:Archivo; font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  padding:2px 6px; border-radius:4px; background:var(--card); flex-shrink:0}
+.bewijs em{font-family:Archivo; font-style:normal; font-size:11.5px; color:var(--ink-3); margin-left:auto}
+.bewijs-geregeld{background:var(--ok-soft); border-left-color:var(--ok)}
+.bewijs-geregeld b{color:var(--ok)}
+.bewijs-deels{background:var(--warn-soft); border-left-color:var(--warn)}
+.bewijs-deels b{color:var(--warn)}
+.bewijs-open{background:var(--crit-soft); border-left-color:var(--crit)}
+.bewijs-open b{color:var(--crit)}
+.bewijs-onbekend b, .bewijs-handmatig b{color:var(--ink-2)}
+.bewijs .overschreven{font-family:Archivo; font-size:11.5px; color:var(--warn); font-weight:600}
+.seg button.auto-actief{box-shadow:inset 0 0 0 1px var(--ink-3); color:var(--ink-2)}
+/* koppelpaneel */
+.koppel{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; align-items:end}
+.koppel .acties{display:flex; gap:8px; flex-wrap:wrap}
+.koppel-stand{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline; margin-top:12px;
+  padding-top:12px; border-top:1px solid var(--line-2); font-family:Archivo; font-size:13px; color:var(--ink-2)}
+.koppel-stand .fout{color:var(--crit)}
+.signaal{display:grid; grid-template-columns:1fr auto; gap:6px 14px; padding:11px 18px; border-bottom:1px solid var(--line-2)}
+.signaal:last-child{border-bottom:none}
+.signaal p{margin:0; font-size:14.5px}
+.signaal small{font-family:Archivo; font-size:12.5px; color:var(--ink-3)}
+.signaal .ref{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3); white-space:nowrap}
+.nvtt{font-family:Archivo; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--nvt-soft); padding:2px 6px; border-radius:4px; margin-left:7px; vertical-align:2px}
 .addnote{font-family:Archivo; font-size:12px; font-weight:500; color:var(--ink-3); background:none;
   border:none; padding:2px 0; border-bottom:1px dashed var(--line)}
 .addnote:hover{color:var(--accent); border-bottom-color:var(--accent)}
@@ -378,7 +407,27 @@ button.primary:hover{background:var(--accent-2); border-color:var(--accent-2)}
           <p>De tien maatregelen uit artikel 21 lid 2 NIS2, hier vertaald naar controles die u in een Microsoft&nbsp;365-omgeving daadwerkelijk kunt aantonen. Rood gestreepte regels zijn de punten waar een toezichthouder als eerste naar vraagt.</p>
         </div>
       </div>
+      <div class="card pad" style="margin-bottom:16px">
+        <div class="koppel">
+          <div class="field">
+            <label for="cippUrl">CIPP-API basis-URL</label>
+            <input type="text" id="cippUrl" placeholder="https://cipp-klant.azurewebsites.net">
+          </div>
+          <div class="field">
+            <label for="cippTenant">Tenant</label>
+            <input type="text" id="cippTenant" placeholder="klant.onmicrosoft.com">
+          </div>
+          <div class="field acties no-print">
+            <button type="button" class="primary" id="btnCipp">Stand ophalen</button>
+            <button type="button" id="btnCippImport">Rapport importeren</button>
+          </div>
+        </div>
+        <div class="koppel-stand" id="cippStand">
+          <span>Nog niets opgehaald. Wat CIPP kan aantonen, hoeft de klant niet uit het hoofd te beantwoorden.</span>
+        </div>
+      </div>
       <div class="flow" id="themasBox"></div>
+      <div class="card" id="signalenBox" hidden></div>
     </section>
 
     <!-- 04 ACTIELIJST -->
@@ -576,6 +625,8 @@ const PLICHTEN = [
    tekst:"Het bestuur keurt de maatregelen goed, ziet toe op de uitvoering en volgt zelf scholing. Bij nalatigheid kan de toezichthouder bestuurders aanspreken; bij essenti&euml;le entiteiten kan zelfs een tijdelijk bestuursverbod volgen."}
 ];
 
+const TOTAAL_CONTROLS = 40;
+
 const STATUSSEN = [
   {id:"geregeld", label:"Geregeld"},
   {id:"deels",    label:"Deels"},
@@ -599,6 +650,27 @@ const VOORBEELD = {
     i1:{status:"geregeld"}, i2:{status:"deels"},
     j1:{status:"geregeld"}, j2:{status:"geregeld"}, j3:{status:"deels"}
   },
+  cipp:{
+    baseUrl:"", tenant:"voorbeeld.onmicrosoft.com",
+    opgehaald:"voorbeeld",
+    bevindingen:{
+      j1:{status:"deels",    kop:"78 van 92 gebruikers (84,8%) kan MFA gebruiken", bron:"Entra ID — userRegistrationDetails"},
+      j2:{status:"geregeld", kop:"6 van 6 beheerders (100%) kan MFA gebruiken",    bron:"Entra ID — userRegistrationDetails"},
+      j3:{status:"open",     kop:"Geen ingeschakeld beleid gevonden dat verouderde authenticatie blokkeert", bron:"Entra ID — voorwaardelijke toegang"},
+      i2:{status:"open",     kop:"9 permanente global administrators",             bron:"Entra ID — directoryRoles"},
+      h2:{status:"geregeld", kop:"104 van 106 apparaten (98,1%) is versleuteld",   bron:"Intune — managedDevices"},
+      e1:{status:"deels",    kop:"81 van 106 apparaten (76,4%) voldoet aan het nalevingsbeleid", bron:"Intune — managedDevices"}
+    },
+    nietTeMeten:{
+      c1:"Of er back-ups buiten de tenant staan, is niet uit Microsoft 365 af te leiden.",
+      c2:"Een geslaagde restoretest bestaat alleen als verslag.",
+      g1:"Scholing van bestuurders bewijst u met een presentielijst, niet met een tenantinstelling."
+    },
+    signalen:[
+      {ref:"art. 21.2 j", kop:"31 van 92 gebruikers (33,7%) heeft een phishingbestendige methode", detail:"Passkey, FIDO2, Windows Hello for Business of certificaat.", bron:"Entra ID — userRegistrationDetails"},
+      {ref:"art. 21.2 i", kop:"12 van 19 beleidsregels voor voorwaardelijke toegang staan aan", detail:"Beleid op rapportagemodus of uit beschermt niets.", bron:"Entra ID — voorwaardelijke toegang"}
+    ]
+  },
   bijgewerkt:0
 };
 
@@ -615,11 +687,28 @@ function leegDossier(){
     org:{naam:"", contact:"", datum:""},
     scope:{sector:"", fte:"", omzet:"", balans:"", uitz:[]},
     plichten:{registratie:"open", meldplicht:"open", bestuur:"open"},
-    antwoorden:{}, bijgewerkt:0};
+    antwoorden:{},
+    cipp:{baseUrl:"", tenant:"", opgehaald:null, bevindingen:{}, nietTeMeten:{}, signalen:[]},
+    bijgewerkt:0};
 }
 function kloon(o){ return JSON.parse(JSON.stringify(o)); }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 const $ = s => document.querySelector(s);
+
+/* Een handmatig antwoord wint altijd van een bevinding uit CIPP.
+   Een bevinding 'onbekend' is geen antwoord: die telt nergens in mee. */
+function autoVan(id){ return (state.cipp && state.cipp.bevindingen && state.cipp.bevindingen[id]) || null; }
+function effStatus(id){
+  const handmatig = (state.antwoorden[id]||{}).status;
+  if(handmatig) return handmatig;
+  const a = autoVan(id);
+  return (a && a.status && a.status !== "onbekend") ? a.status : "";
+}
+/* Verplicht of vrijwillig: wie buiten scope valt, krijgt dezelfde check als nulmeting. */
+function modus(){
+  const k = bepaalScope().klasse;
+  return k === "buiten" ? "vrijwillig" : (k === "onbekend" ? "neutraal" : "verplicht");
+}
 
 /* ============================================================
    SCOPEBEPALING
@@ -672,6 +761,14 @@ const VERDICT_TEKST = {
     uitleg:"Zodra sector en omvang bekend zijn, bepaalt de wegwijzer of u essenti&euml;le of belangrijke entiteit bent."
   }
 };
+
+function tekenModusTekst(){
+  const p = document.querySelector("#actielijst .sec-head p");
+  if(!p) return;
+  p.innerHTML = modus() === "vrijwillig"
+    ? "U valt vermoedelijk buiten de wet, maar de stand blijft staan: alles wat op <em>niet geregeld</em> of <em>deels</em> staat, op volgorde van risico. Dit is uw nulmeting — en het antwoord op de vragenlijst die uw klanten u gaan sturen."
+    : "Alles wat hierboven op <em>niet geregeld</em> of <em>deels</em> staat, op volgorde van urgentie. Dit is het blad dat u meeneemt naar het gesprek met de klant.";
+}
 
 function tekenVerdict(){
   const r = bepaalScope();
@@ -745,14 +842,30 @@ function tekenThemas(){
       ${t.controls.map(c => {
         const a = state.antwoorden[c.id] || {};
         const st = a.status || "";
+        const auto = autoVan(c.id);
+        const niet = state.cipp && state.cipp.nietTeMeten ? state.cipp.nietTeMeten[c.id] : null;
+        const overschreven = auto && st && auto.status !== "onbekend" && st !== auto.status;
+        const bewijs = auto
+          ? `<p class="bewijs bewijs-${auto.status||"onbekend"}">
+               <b>CIPP</b> <span>${auto.kop}</span>
+               ${overschreven?`<span class="overschreven">handmatig overschreven</span>`:""}
+               <em>${auto.bron||""}</em>
+             </p>`
+          : (niet
+            ? `<p class="bewijs bewijs-handmatig"><b>handmatig</b> <span>${niet}</span></p>`
+            : "");
         return `<div class="ctrl ${c.prio?"prio1":""}">
           <div class="ctrl-txt">
-            <p>${c.tekst}${c.prio?'<span class="kern">kern</span>':""}</p>
+            <p>${c.tekst}${c.prio?'<span class="kern">kern</span>':""}${niet?'<span class="nvtt">niet meetbaar</span>':""}</p>
             ${c.hint?`<p class="ctrl-hint"><b>Aantonen</b> <span>${c.hint}</span></p>`:""}
           </div>
           <div class="seg no-print" data-ctrl="${c.id}" role="group" aria-label="Status maatregel">
-            ${STATUSSEN.map(s => `<button type="button" data-s="${s.id}" aria-pressed="${st===s.id}">${s.label}</button>`).join("")}
+            ${STATUSSEN.map(s => {
+              const autoActief = !st && auto && auto.status === s.id;
+              return `<button type="button" data-s="${s.id}" class="${autoActief?"auto-actief":""}" aria-pressed="${st===s.id||autoActief}">${s.label}</button>`;
+            }).join("")}
           </div>
+          ${bewijs}
           <div class="notitie">
             <button type="button" class="addnote no-print" data-addnote="${c.id}"${a.notitie?" hidden":""}>+ notitie of bewijsstuk</button>
             <textarea id="notitie-${c.id}" data-notitie="${c.id}" rows="1" placeholder="Notitie of bewijsstuk"${a.notitie?"":" hidden"}>${esc(a.notitie||"")}</textarea>
@@ -771,13 +884,16 @@ function tekenActielijst(){
     items.push({ref:"Stap 02", wat:p.titel, sub:p.deadline, status:st, prio:1});
   });
   THEMAS.forEach(t => t.controls.forEach(c => {
-    const st = (state.antwoorden[c.id]||{}).status;
+    const st = effStatus(c.id);
     if(st === "geregeld" || st === "nvt") return;
     const notitie = (state.antwoorden[c.id]||{}).notitie;
+    const auto = autoVan(c.id);
+    const sub = notitie ? esc(notitie)
+      : (auto && auto.status && auto.status !== "onbekend" ? `CIPP: ${auto.kop}` : (c.hint || t.naam));
     items.push({
       ref:`art. 21.2 ${t.letter}`,
       wat:c.tekst,
-      sub: notitie ? esc(notitie) : (c.hint || t.naam),
+      sub,
       status: st || "open",
       prio: c.prio ? 1 : 0
     });
@@ -788,13 +904,13 @@ function tekenActielijst(){
   const open = items.filter(i => i.prio === 1).length;
   const box = $("#actieBox");
   if(!items.length){
-    box.innerHTML = `<div class="leeg">Niets open. Alles staat op <strong>geregeld</strong> of <strong>n.v.t.</strong> — leg de onderbouwing vast, want bij toezicht telt wat u kunt aantonen.</div>`;
+    box.innerHTML = `<div class="leeg">Niets open. Alles staat op <strong>geregeld</strong> of <strong>n.v.t.</strong> — leg de onderbouwing vast, want ${modus()==="vrijwillig" ? "ook zonder toezichthouder telt alleen wat u kunt aantonen" : "bij toezicht telt wat u kunt aantonen"}.</div>`;
     return;
   }
   box.innerHTML =
     `<div class="pad" style="border-bottom:1px solid var(--line-2);display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">
        <strong style="font-family:Archivo;font-size:14px">${items.length} openstaande punten</strong>
-       <span style="font-family:Archivo;font-size:13px;color:var(--ink-3)">waarvan <strong style="color:var(--crit)">${open}</strong> kernpunten waar een toezichthouder als eerste naar vraagt</span>
+       <span style="font-family:Archivo;font-size:13px;color:var(--ink-3)">waarvan <strong style="color:var(--crit)">${open}</strong> kernpunten &mdash; ${modus()==="vrijwillig" ? "hier zit uw grootste risico, ongeacht of de wet op u van toepassing is" : "hier vraagt een toezichthouder als eerste naar"}</span>
      </div>` +
     items.map(i => `<div class="actie">
       <span class="ref mono">${i.ref}</span>
@@ -808,7 +924,7 @@ function tekenVoortgang(){
   THEMAS.forEach(t => {
     let tTot = 0, tSom = 0;
     t.controls.forEach(c => {
-      const st = (state.antwoorden[c.id]||{}).status;
+      const st = effStatus(c.id);
       if(st === "nvt") return;
       tTot++;
       if(st === "geregeld") tSom += 1;
@@ -833,14 +949,103 @@ function tekenVoortgang(){
   if(zpPct) zpPct.textContent = pct + "% geregeld";
 }
 
+function tekenCippStand(){
+  const box = $("#cippStand");
+  const c = state.cipp || {};
+  const aantal = Object.keys(c.bevindingen||{}).length;
+  if(!c.opgehaald || !aantal){
+    box.innerHTML = "<span>Nog niets opgehaald. Wat CIPP kan aantonen, hoeft de klant niet uit het hoofd te beantwoorden.</span>";
+    return;
+  }
+  const bruikbaar = Object.values(c.bevindingen).filter(b => b.status && b.status !== "onbekend").length;
+  const wanneer = c.opgehaald === "voorbeeld"
+    ? "voorbeeldgegevens"
+    : new Date(c.opgehaald).toLocaleString("nl-NL", {dateStyle:"medium", timeStyle:"short"});
+  const nietTeMeten = Object.keys(c.nietTeMeten||{}).length;
+  box.innerHTML = `
+    <span><strong>${bruikbaar}</strong> van ${TOTAAL_CONTROLS} controles automatisch ingevuld</span>
+    <span>tenant <span class="mono">${esc(c.tenant||"onbekend")}</span></span>
+    <span>opgehaald ${wanneer}</span>
+    ${nietTeMeten?`<span>${nietTeMeten} controles zijn niet uit de tenant te bewijzen — die blijven handwerk</span>`:""}`;
+}
+
+function tekenSignalen(){
+  const box = $("#signalenBox");
+  const sig = (state.cipp && state.cipp.signalen) || [];
+  if(!sig.length){ box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = `<div class="pad" style="border-bottom:1px solid var(--line-2)">
+      <strong style="font-family:Archivo;font-size:14px">Overige signalen uit de tenant</strong>
+      <p style="margin:4px 0 0;font-size:14.5px;color:var(--ink-2)">Waarnemingen die geen wettelijke eis zijn, maar wel het gesprek bepalen.</p>
+    </div>` +
+    sig.map(x => `<div class="signaal">
+      <p>${x.kop}<small>${x.detail||""}</small></p>
+      <span class="ref">${x.ref||""}</span>
+    </div>`).join("");
+}
+
+function verwerkCippRapport(rapport){
+  if(!rapport || !Array.isArray(rapport.Controls)){
+    throw new Error("Dit is geen Cbw-rapport uit CIPP: het veld Controls ontbreekt.");
+  }
+  const bekend = new Set(THEMAS.flatMap(t => t.controls.map(c => c.id)));
+  const bevindingen = {}, nietTeMeten = {}, signalen = [];
+  rapport.Controls.forEach(c => {
+    const item = {status:c.Status, kop:c.Headline, detail:c.Detail, bron:c.Source};
+    if(bekend.has(c.ControlId)) bevindingen[c.ControlId] = item;
+    else signalen.push({ref:c.Article, kop:c.Headline, detail:c.Detail, bron:c.Source});
+  });
+  (rapport.NotDetectable||[]).forEach(n => { nietTeMeten[n.ControlId] = n.Reason; });
+  state.cipp = Object.assign({}, state.cipp, {
+    bevindingen, nietTeMeten, signalen,
+    tenant: rapport.TenantFilter || state.cipp.tenant,
+    opgehaald: rapport.GeneratedAt || new Date().toISOString()
+  });
+  state.demo = false;
+  bewaar();
+  tekenThemas();
+  tekenAlles();
+}
+
+async function haalCippStand(){
+  const c = state.cipp || {};
+  const basis = (c.baseUrl||"").trim().replace(/\/+$/, "");
+  const tenant = (c.tenant||"").trim();
+  const box = $("#cippStand");
+  if(!basis || !tenant){
+    box.innerHTML = `<span class="fout">Vul eerst de basis-URL van CIPP en de tenant in.</span>`;
+    return;
+  }
+  box.innerHTML = "<span>Ophalen uit CIPP…</span>";
+  try{
+    const url = `${basis}/api/ListCbwReadiness?tenantFilter=${encodeURIComponent(tenant)}`;
+    const antwoord = await fetch(url, {credentials:"include", headers:{Accept:"application/json"}});
+    if(!antwoord.ok){
+      const tekst = await antwoord.text().catch(() => "");
+      throw new Error(`CIPP antwoordde met ${antwoord.status}. ${tekst.slice(0,200)}`);
+    }
+    verwerkCippRapport(await antwoord.json());
+  }catch(err){
+    const netwerk = err instanceof TypeError;
+    box.innerHTML = `<span class="fout">${esc(netwerk
+      ? "Geen verbinding met CIPP. Deze pagina draait op een ander domein, dus CIPP moet dit domein toestaan (CORS) en u moet er ingelogd zijn."
+      : err.message)}</span>
+      <span>Werkt dat niet? Roep het endpoint aan in CIPP, bewaar het antwoord als JSON en gebruik <strong>Rapport importeren</strong>.</span>`;
+  }
+}
+
 function tekenAlles(){
   tekenVerdict();
   tekenActielijst();
   tekenVoortgang();
+  tekenCippStand();
+  tekenSignalen();
+  tekenModusTekst();
   $("#demoRij").style.display = state.demo ? "" : "none";
 }
 
 function vulFormulier(){
+  if(!state.cipp) state.cipp = leegDossier().cipp;
   $("#orgNaam").value = state.org.naam || "";
   $("#orgContact").value = state.org.contact || "";
   $("#orgDatum").value = state.org.datum || "";
@@ -848,6 +1053,8 @@ function vulFormulier(){
   $("#numFte").value = state.scope.fte ?? "";
   $("#numOmzet").value = state.scope.omzet ?? "";
   $("#numBalans").value = state.scope.balans ?? "";
+  $("#cippUrl").value = (state.cipp && state.cipp.baseUrl) || "";
+  $("#cippTenant").value = (state.cipp && state.cipp.tenant) || "";
   document.querySelectorAll("[data-uitz]").forEach(cb => {
     cb.checked = (state.scope.uitz||[]).includes(cb.dataset.uitz);
   });
@@ -937,6 +1144,11 @@ function koppel(){
     $("#"+id).addEventListener("input", e => wijzig(() => state.scope[key] = e.target.value));
   });
 
+  $("#cippUrl").addEventListener("input", e => wijzig(() => state.cipp.baseUrl = e.target.value));
+  $("#cippTenant").addEventListener("input", e => wijzig(() => state.cipp.tenant = e.target.value));
+  $("#btnCipp").addEventListener("click", haalCippStand);
+  $("#btnCippImport").addEventListener("click", () => $("#fileImport").click());
+
   document.addEventListener("change", e => {
     const cb = e.target.closest("[data-uitz]");
     if(!cb) return;
@@ -962,12 +1174,8 @@ function koppel(){
         state.plichten[id] = state.plichten[id] === nieuw ? "open" : nieuw;
       }
     });
-    seg.querySelectorAll("button").forEach(b => {
-      const actief = seg.dataset.ctrl
-        ? (state.antwoorden[seg.dataset.ctrl]||{}).status === b.dataset.s
-        : state.plichten[seg.dataset.plicht] === b.dataset.s;
-      b.setAttribute("aria-pressed", actief ? "true" : "false");
-    });
+    if(seg.dataset.ctrl) tekenThemas(); else tekenPlichten();
+    tekenAlles();
   });
 
   document.addEventListener("click", e => {
@@ -1036,13 +1244,18 @@ function koppel(){
     r.onload = () => {
       try{
         const d = JSON.parse(r.result);
+        if(d && Array.isArray(d.Controls)){
+          verwerkCippRapport(d);
+          meldOpslag("CIPP-stand geladen");
+          return;
+        }
         if(!d || !d.versie) throw new Error("geen dossier");
         state = Object.assign(leegDossier(), d);
         state.demo = false;
         bewaar(); vulFormulier();
         meldOpslag("ge&iuml;mporteerd");
       }catch(err){
-        alert("Dit bestand is geen Cbw-dossier. Kies een JSON-bestand dat met de knop Exporteren is gemaakt.");
+        alert("Dit bestand is geen Cbw-dossier en geen CIPP-rapport.\n\n" + err.message);
       }
     };
     r.readAsText(f);
