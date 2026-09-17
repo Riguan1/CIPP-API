@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wp-audit"
+version = "1.0.0"
+description = "Passive, read-only security scanner for WordPress websites, with a local vulnerability database"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28",
+]
+
+[project.optional-dependencies]
+# Certificate inspection degrades gracefully without it, but a broken certificate can only be
+# described in detail when it is installed.
+tls = ["cryptography>=41"]
+dev = ["pytest>=7", "cryptography>=41"]
+
+[project.scripts]
+wp-audit = "wpaudit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["wpaudit*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    # The scanner must not fall over because one site, one feed entry or one certificate is
+    # malformed, and the places that catch broadly say so in a comment at each site.
+    "BLE001",
+    # Long explanatory strings in findings read better unwrapped than folded.
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["RUF012", "E731"]

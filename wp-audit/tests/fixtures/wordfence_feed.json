@@ -1,0 +1,143 @@
+{
+  "8f4c1ac5-0000-4000-8000-000000000001": {
+    "id": "8f4c1ac5-0000-4000-8000-000000000001",
+    "title": "Contact Form 7 <= 5.7.1 - Unauthenticated Arbitrary File Upload",
+    "software": [
+      {
+        "type": "plugin",
+        "name": "Contact Form 7",
+        "slug": "contact-form-7",
+        "affected_versions": {
+          "* - 5.7.1": {
+            "from_version": "*",
+            "from_inclusive": true,
+            "to_version": "5.7.1",
+            "to_inclusive": true
+          }
+        },
+        "patched": true,
+        "patched_versions": ["5.7.2"],
+        "remediation": "Update to version 5.7.2, or a newer patched version"
+      }
+    ],
+    "cve": "CVE-2023-6449",
+    "cvss": {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "score": 9.8,
+      "rating": "Critical"
+    },
+    "published": "2023-12-11T15:01:00.000Z",
+    "references": [
+      "https://www.wordfence.com/threat-intel/vulnerabilities/id/8f4c1ac5",
+      "https://wordpress.org/plugins/contact-form-7/#developers"
+    ]
+  },
+  "8f4c1ac5-0000-4000-8000-000000000002": {
+    "id": "8f4c1ac5-0000-4000-8000-000000000002",
+    "title": "WooCommerce 8.0.0 - 8.2.1 - Reflected Cross-Site Scripting",
+    "software": [
+      {
+        "type": "plugin",
+        "name": "WooCommerce",
+        "slug": "woocommerce",
+        "affected_versions": {
+          "8.0.0 - 8.2.1": {
+            "from_version": "8.0.0",
+            "from_inclusive": true,
+            "to_version": "8.2.1",
+            "to_inclusive": true
+          }
+        },
+        "patched": true,
+        "patched_versions": ["8.2.2"]
+      }
+    ],
+    "cve": "CVE-2023-0001",
+    "cvss": {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+      "score": 6.1,
+      "rating": "Medium"
+    },
+    "published": "2023-11-02T10:00:00.000Z",
+    "references": ["https://www.wordfence.com/threat-intel/vulnerabilities/id/8f4c1ac5-2"]
+  },
+  "8f4c1ac5-0000-4000-8000-000000000003": {
+    "id": "8f4c1ac5-0000-4000-8000-000000000003",
+    "title": "WordPress Core 6.3 - 6.3.1 - Authenticated Information Disclosure",
+    "software": [
+      {
+        "type": "core",
+        "name": "WordPress",
+        "slug": "wordpress",
+        "affected_versions": {
+          "6.3 - 6.3.1": {
+            "from_version": "6.3",
+            "from_inclusive": true,
+            "to_version": "6.3.1",
+            "to_inclusive": true
+          }
+        },
+        "patched": true,
+        "patched_versions": ["6.3.2"]
+      }
+    ],
+    "cve": "CVE-2023-39999",
+    "cvss": {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "score": 6.5,
+      "rating": "Medium"
+    },
+    "published": "2023-10-13T09:00:00.000Z",
+    "references": ["https://wordpress.org/news/2023/10/wordpress-6-3-2-maintenance-and-security-release/"]
+  },
+  "8f4c1ac5-0000-4000-8000-000000000004": {
+    "id": "8f4c1ac5-0000-4000-8000-000000000004",
+    "title": "Twenty Twenty-Three <= 1.0 - Stored Cross-Site Scripting",
+    "software": [
+      {
+        "type": "theme",
+        "name": "Twenty Twenty-Three",
+        "slug": "twentytwentythree",
+        "affected_versions": {
+          "* - 1.0": {
+            "from_version": "*",
+            "from_inclusive": true,
+            "to_version": "1.0",
+            "to_inclusive": true
+          }
+        },
+        "patched": true,
+        "patched_versions": ["1.1"]
+      }
+    ],
+    "cve": "CVE-2023-0002",
+    "cvss": { "score": 5.4, "rating": "Medium" },
+    "published": "2023-05-01T00:00:00.000Z",
+    "references": []
+  },
+  "8f4c1ac5-0000-4000-8000-000000000005": {
+    "id": "8f4c1ac5-0000-4000-8000-000000000005",
+    "title": "Contact Form 7 <= 5.6.0 - Cross-Site Request Forgery",
+    "software": [
+      {
+        "type": "plugin",
+        "name": "Contact Form 7",
+        "slug": "contact-form-7",
+        "affected_versions": {
+          "* - 5.6.0": {
+            "from_version": "*",
+            "from_inclusive": true,
+            "to_version": "5.6.0",
+            "to_inclusive": true
+          }
+        },
+        "patched": true,
+        "patched_versions": ["5.6.1"]
+      }
+    ],
+    "cve": "CVE-2022-0003",
+    "cvss": { "score": 4.3, "rating": "Medium" },
+    "published": "2022-08-01T00:00:00.000Z",
+    "references": []
+  }
+}
