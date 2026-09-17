@@ -152,6 +152,9 @@
     },
     {
       "name": "Tools > Report-Builder"
+    },
+    {
+      "name": "Tools > WordPress-Security"
     }
   ],
   "components": {
@@ -59424,6 +59427,85 @@
           }
         ],
         "x-cipp-role": "CIPP.Alert.Read"
+      }
+    },
+    "/api/ListWordPressSecurity": {
+      "get": {
+        "summary": "ListWordPressSecurity",
+        "operationId": "ListWordPressSecurity",
+        "tags": [
+          "Tools > WordPress-Security"
+        ],
+        "description": "Runs a passive, read-only security assessment of a WordPress website and returns scored findings covering transport security, response headers, version currency of core, plugins and themes, and files the site exposes.",
+        "parameters": [
+          {
+            "name": "Url",
+            "in": "query",
+            "description": "The website to scan. A bare hostname is treated as https. Only public internet targets are accepted.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxRequests",
+            "in": "query",
+            "description": "Ceiling on the requests made against the target, 2-100. Defaults to 30.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SkipExposureProbes",
+            "in": "query",
+            "description": "Run only the home page checks: transport, headers and fingerprinting.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SkipVersionLookup",
+            "in": "query",
+            "description": "Do not contact WordPress.org; report version comparisons as Unknown.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListWorkerHealth": {
