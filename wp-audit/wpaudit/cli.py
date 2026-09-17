@@ -25,7 +25,13 @@ from .models import ScanReport, Severity, Status
 from .notify import WEBHOOK_FORMATS, build_payload, render_summary_text, send_webhook
 from .report import render_html, render_json, render_text
 from .scanner import scan
-from .vulndb.sources import WordfenceSource, WPScanSource, load_feed_file
+from .vulndb.sources import (
+    WORDFENCE_TOKEN_ENV,
+    FeedAuthError,
+    WordfenceSource,
+    WPScanSource,
+    load_feed_file,
+)
 from .vulndb.store import VulnerabilityDatabase, default_db_path, iter_progress
 
 EXIT_OK = 0
@@ -53,13 +59,35 @@ def build_parser() -> argparse.ArgumentParser:
         "update",
         help="download the vulnerability feed into the local database",
         description=(
-            "Downloads the Wordfence Intelligence vulnerability feed (free, no API key, CC BY-SA "
-            "4.0) and indexes it locally. Run this from a nightly scheduled task so scans keep "
-            "matching against current data."
+            "Downloads the Wordfence Intelligence vulnerability feed (free, CC BY-SA 4.0) and "
+            "indexes it locally. Run this from a nightly scheduled task so scans keep matching "
+            f"against current data. v3 of the feed needs an API token: set {WORDFENCE_TOKEN_ENV} "
+            "or pass --wordfence-token."
         ),
     )
     update.add_argument("--db", default=None, help=f"database path (default: {default_db_path()})")
-    update.add_argument("--feed-url", default=None, help="override the feed URL")
+    update.add_argument(
+        "--wordfence-token",
+        default=None,
+        help=(
+            f"Wordfence API token (free, from Integrations in your account dashboard). Prefer the "
+            f"{WORDFENCE_TOKEN_ENV} environment variable - a token on the command line is visible "
+            "in the process list."
+        ),
+    )
+    update.add_argument(
+        "--feed",
+        choices=["scanner", "production"],
+        default="scanner",
+        help="scanner (default, includes vulnerabilities still being researched) or production",
+    )
+    update.add_argument(
+        "--feed-version",
+        choices=["v3", "v2"],
+        default="v3",
+        help="feed API version. v2 needs no token but is being retired",
+    )
+    update.add_argument("--feed-url", default=None, help="override the feed URL entirely")
     update.add_argument(
         "--from-file", default=None, help="index a feed already downloaded, for offline use"
     )
@@ -182,7 +210,13 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run_update(args) -> int:
     database = VulnerabilityDatabase(args.db)
-    source = WordfenceSource(args.feed_url or WordfenceSource().url, timeout=args.timeout)
+    source = WordfenceSource(
+        args.feed_url,
+        version=args.feed_version,
+        variant=args.feed,
+        token=args.wordfence_token,
+        timeout=args.timeout,
+    )
 
     if not args.quiet:
         origin = args.from_file or source.url
@@ -190,6 +224,12 @@ def _run_update(args) -> int:
 
     try:
         payload = load_feed_file(args.from_file) if args.from_file else source.fetch()
+    except FeedAuthError as exc:
+        # Worth its own message: a token problem and a network problem look identical from the
+        # outside and need completely different fixes.
+        print(f"{exc}", file=sys.stderr)
+        print("  The previous database (if any) is untouched.", file=sys.stderr)
+        return EXIT_ERROR
     except Exception as exc:  # network, JSON, or filesystem - all the same to the caller
         print(f"Could not retrieve the vulnerability feed: {exc}", file=sys.stderr)
         print(

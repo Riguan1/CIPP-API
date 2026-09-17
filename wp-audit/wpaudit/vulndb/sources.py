@@ -3,15 +3,25 @@
 Two sources, deliberately different in kind:
 
 **Wordfence Intelligence** publishes its whole WordPress vulnerability database as one JSON
-document, free and without an API key, under CC BY-SA 4.0. That is the default here because it can
-be downloaded once and matched locally: scanning fifty sites with thirty plugins each costs one
-HTTP request, not fifteen hundred, and it works offline afterwards. Attribution is a licence
-condition, so the report carries it.
+document. That is the default here because it can be downloaded once and matched locally: scanning
+fifty sites with thirty plugins each costs one HTTP request, not fifteen hundred, and it works
+offline afterwards. Attribution is a licence condition (CC BY-SA 4.0), so the report carries it.
+
+It is still free, but since **v3 of the feed it needs an API token**: a free wordfence.com account,
+then Integrations in the account dashboard. The token goes in an `Authorization: Bearer` header. v2
+was open and is being retired, so v3 is the default here and v2 remains selectable only for
+whoever is still inside the grace period. A missing or rejected token is reported as exactly that,
+because "403" on its own sends people looking for a network fault that is not there.
+
+Two variants: `scanner` (the default -- minimal records, and it includes newly discovered
+vulnerabilities still being researched) and `production` (fully analysed records with more
+metadata). For matching versions, which is all this tool does with them, scanner is the one that
+sees more.
 
 **WPScan** is the other well-known database. It is per-component rather than bulk (one request per
-plugin) and needs an API token, whose free tier is 25 requests a day -- enough to enrich a single
-site, not to sweep a customer base. It is supported as an optional second opinion for people who
-already pay for it.
+plugin) and needs its own API token, whose free tier is 25 requests a day -- enough to enrich a
+single site, not to sweep a customer base. It is supported as an optional second opinion for people
+who already pay for it.
 
 Neither feed is reachable from every network, and neither is guaranteed to be complete. A component
 with no advisories means "nothing published in this feed for this version", not "safe".
@@ -20,15 +30,23 @@ with no advisories means "nothing published in this feed for this version", not 
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
 import requests
 
-WORDFENCE_SCANNER_FEED = "https://www.wordfence.com/api/intelligence/v2/vulnerabilities/scanner"
-WORDFENCE_PRODUCTION_FEED = (
-    "https://www.wordfence.com/api/intelligence/v2/vulnerabilities/production"
+WORDFENCE_API = "https://www.wordfence.com/api/intelligence"
+WORDFENCE_VERSIONS = ("v3", "v2")
+WORDFENCE_VARIANTS = ("scanner", "production")
+#: Read when no token is passed explicitly. An environment variable rather than a flag by default:
+#: a token on the command line is visible in `ps` and lands in shell history.
+WORDFENCE_TOKEN_ENV = "WORDFENCE_API_TOKEN"
+WORDFENCE_TOKEN_HELP = (
+    "v3 of the Wordfence feed needs an API token. Create a free account at wordfence.com, generate "
+    f"a token under Integrations in the account dashboard, and set {WORDFENCE_TOKEN_ENV} (or pass "
+    "--wordfence-token)."
 )
 WORDFENCE_ATTRIBUTION = (
     "Vulnerability data from Wordfence Intelligence (https://www.wordfence.com/threat-intel/), "
@@ -37,6 +55,10 @@ WORDFENCE_ATTRIBUTION = (
 WPSCAN_API = "https://wpscan.com/api/v3"
 
 USER_AGENT = "wp-audit/1.0 (+https://github.com/wp-audit)"
+
+
+class FeedAuthError(RuntimeError):
+    """The feed refused the request because of the token, not the network."""
 
 
 @dataclass
@@ -94,16 +116,55 @@ class WordfenceSource:
     name = "wordfence"
     attribution = WORDFENCE_ATTRIBUTION
 
-    def __init__(self, url: str = WORDFENCE_SCANNER_FEED, *, timeout: float = 120.0) -> None:
-        self.url = url
+    def __init__(
+        self,
+        url: str | None = None,
+        *,
+        version: str = "v3",
+        variant: str = "scanner",
+        token: str | None = None,
+        timeout: float = 120.0,
+    ) -> None:
+        if version not in WORDFENCE_VERSIONS:
+            raise ValueError(f"Unknown Wordfence feed version '{version}'.")
+        if variant not in WORDFENCE_VARIANTS:
+            raise ValueError(f"Unknown Wordfence feed variant '{variant}'.")
+
+        self.version = version
+        self.variant = variant
+        # An explicit URL wins, so a mirror or a future path can be pointed at without a release.
+        self.url = url or f"{WORDFENCE_API}/{version}/vulnerabilities/{variant}"
+        self.token = token or os.environ.get(WORDFENCE_TOKEN_ENV) or ""
         self.timeout = timeout
 
+    @property
+    def needs_token(self) -> bool:
+        """v2 was open to anyone; v3 is not."""
+        return self.version == "v3"
+
     def fetch(self) -> Any:
-        response = requests.get(
-            self.url,
-            timeout=self.timeout,
-            headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
-        )
+        if self.needs_token and not self.token:
+            raise FeedAuthError(WORDFENCE_TOKEN_HELP)
+
+        headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+
+        response = requests.get(self.url, timeout=self.timeout, headers=headers)
+
+        if response.status_code in (401, 403):
+            # Distinguished from any other failure on purpose: a rejected token looks exactly like
+            # a blocked network from the outside, and the two need completely different fixes.
+            raise FeedAuthError(
+                f"Wordfence rejected the request ({response.status_code}). "
+                + (
+                    "Check that the token is current and has feed access. "
+                    if self.token
+                    else WORDFENCE_TOKEN_HELP + " "
+                )
+                + f"Endpoint: {self.url}"
+            )
+
         response.raise_for_status()
         return response.json()
 

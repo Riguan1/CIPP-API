@@ -336,3 +336,76 @@ class TestFeedUpdateAlerts:
                      "--history", str(history), "--alert-known"])
         assert "Nothing in this update affects" in capsys.readouterr().out
         assert code == EXIT_OK
+
+
+class TestFeedAuthentication:
+    """v3 of the Wordfence feed needs a token. The failure has to be self-explanatory."""
+
+    def test_refuses_to_update_without_a_token_and_says_how_to_get_one(self, tmp_path, capsys):
+        db = tmp_path / "vulndb.sqlite"
+        code = main(["update", "--db", str(db)])
+
+        assert code == EXIT_ERROR
+        error = capsys.readouterr().err
+        assert "Integrations" in error
+        assert "WORDFENCE_API_TOKEN" in error
+        # Nothing was written, so a failed update cannot leave a scanner with an empty database.
+        assert not db.exists()
+
+    def test_a_file_import_needs_no_token(self, tmp_path, feed_file, capsys):
+        # The air-gapped path has to keep working without an account.
+        db = tmp_path / "vulndb.sqlite"
+        assert main(["update", "--db", str(db), "--from-file", str(feed_file), "-q"]) == EXIT_OK
+        assert db.exists()
+
+    def test_v2_needs_no_token(self, tmp_path, monkeypatch):
+        import wpaudit.vulndb.sources as sources
+
+        captured = {}
+
+        class Response:
+            status_code = 200
+
+            def json(self):
+                return {}
+
+            def raise_for_status(self):
+                pass
+
+        def fake_get(url, timeout=None, headers=None):
+            captured["url"] = url
+            captured["headers"] = headers or {}
+            return Response()
+
+        monkeypatch.setattr(sources.requests, "get", fake_get)
+        code = main(["update", "--db", str(tmp_path / "v2.sqlite"), "--feed-version", "v2", "-q"])
+
+        assert code == EXIT_OK
+        assert "/v2/vulnerabilities/scanner" in captured["url"]
+        assert "Authorization" not in captured["headers"]
+
+    def test_passes_the_token_and_feed_choice_through(self, tmp_path, monkeypatch):
+        import wpaudit.vulndb.sources as sources
+
+        captured = {}
+
+        class Response:
+            status_code = 200
+
+            def json(self):
+                return {}
+
+            def raise_for_status(self):
+                pass
+
+        def fake_get(url, timeout=None, headers=None):
+            captured["url"] = url
+            captured["headers"] = headers or {}
+            return Response()
+
+        monkeypatch.setattr(sources.requests, "get", fake_get)
+        main(["update", "--db", str(tmp_path / "p.sqlite"), "--wordfence-token", "tok",
+              "--feed", "production", "-q"])
+
+        assert "/v3/vulnerabilities/production" in captured["url"]
+        assert captured["headers"]["Authorization"] == "Bearer tok"

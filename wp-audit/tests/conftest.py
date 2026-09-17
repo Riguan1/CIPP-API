@@ -123,6 +123,8 @@ def isolate_user_state(tmp_path, monkeypatch):
     """
     monkeypatch.setenv("WP_AUDIT_HISTORY", str(tmp_path / "history.sqlite"))
     monkeypatch.setenv("WP_AUDIT_DB", str(tmp_path / "vulndb.sqlite"))
+    # And a real Wordfence token, so a developer who has one configured sees what CI sees.
+    monkeypatch.delenv("WORDFENCE_API_TOKEN", raising=False)
 
 
 @pytest.fixture

@@ -41,17 +41,36 @@ affects how much detail you get about a certificate that fails validation.
 This is what makes the scanner stay useful over time rather than going stale the day it is written.
 
 `wp-audit update` downloads the **Wordfence Intelligence** vulnerability feed — the full WordPress
-vulnerability database, free, no API key — and indexes it into a local SQLite file. Scans then match
-against that copy, so:
+vulnerability database — and indexes it into a local SQLite file. Scans then match against that
+copy, so:
 
 * one download covers any number of sites and any number of plugins;
 * scans keep working with no internet access to the feed at all;
 * there is no per-scan rate limit to work around.
 
+### Getting a token
+
+The feed is free, but **v3 requires an API token**. Register a free account at
+[wordfence.com](https://www.wordfence.com/), then generate a token under **Integrations** in the
+account dashboard. v2 was open to anyone and is being retired, so v3 is the default here.
+
 ```bash
-wp-audit update                      # ~/.cache/wp-audit/vulndb.sqlite by default
+export WORDFENCE_API_TOKEN='your-token'      # preferred: a token on the command line
+wp-audit update                              # shows up in `ps` and shell history
+
+wp-audit update --wordfence-token 'your-token'   # if you must
+wp-audit update --feed-version v2                # no token, only while v2 still answers
+```
+
+A missing or rejected token is reported as exactly that, with the link to fix it — not as a network
+error, which is what it otherwise looks like from the outside.
+
+```bash
+wp-audit update                          # ~/.cache/wp-audit/vulndb.sqlite by default
 wp-audit update --db /srv/wp-audit/vulndb.sqlite
-wp-audit update --from-file feed.json   # air-gapped: download the feed elsewhere
+wp-audit update --feed production        # fully analysed records; 'scanner' (default) also
+                                         # carries vulnerabilities still being researched
+wp-audit update --from-file feed.json    # air-gapped: download the feed elsewhere, no token needed
 ```
 
 The database's age travels with every report, and a scan against data more than a week old says so
@@ -71,6 +90,8 @@ Two schedules, because they answer different questions.
 ### Nightly: has anything new been published?
 
 ```cron
+WORDFENCE_API_TOKEN=your-token
+
 15 3 * * *  /srv/wp-audit/.venv/bin/wp-audit update --alert-known \
               --db /srv/wp-audit/vulndb.sqlite --history /srv/wp-audit/history.sqlite -q
 ```
