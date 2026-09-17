@@ -17,8 +17,12 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .alerts import match_inventory, new_matches, render_feed_alert
 from .checks.components import WordPressOrg
+from .diff import ScanDiff, compare
+from .history import ScanHistory, default_history_path, site_key
 from .models import ScanReport, Severity, Status
+from .notify import WEBHOOK_FORMATS, build_payload, render_summary_text, send_webhook
 from .report import render_html, render_json, render_text
 from .scanner import scan
 from .vulndb.sources import WordfenceSource, WPScanSource, load_feed_file
@@ -60,6 +64,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--from-file", default=None, help="index a feed already downloaded, for offline use"
     )
     update.add_argument("--timeout", type=float, default=120.0, help="download timeout in seconds")
+    update.add_argument(
+        "--alert-known",
+        action="store_true",
+        help=(
+            "after updating, report advisories that now match components already seen on scanned "
+            "sites - the answer to 'does today's feed affect any of my customers'"
+        ),
+    )
+    update.add_argument("--history", default=None, help="scan history path (for --alert-known)")
+    update.add_argument("--webhook", default=None, help="post the alert to this URL")
+    update.add_argument(
+        "--webhook-format", choices=list(WEBHOOK_FORMATS), default="json", help="webhook payload shape"
+    )
     update.add_argument("--quiet", "-q", action="store_true")
 
     scan_parser = subparsers.add_parser(
@@ -110,6 +127,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="exit 1 when a finding at or above this severity is present",
     )
     scan_parser.add_argument("--quiet", "-q", action="store_true", help="only write the report file")
+    scan_parser.add_argument(
+        "--history", default=None, help=f"scan history path (default: {default_history_path()})"
+    )
+    scan_parser.add_argument(
+        "--no-history", action="store_true", help="do not record this scan or compare with the last"
+    )
+    scan_parser.add_argument(
+        "--only-changes",
+        action="store_true",
+        help=(
+            "print only what changed since the previous scan, and nothing at all when nothing did "
+            "- so a cron job mails you only when something happened"
+        ),
+    )
+    scan_parser.add_argument(
+        "--fail-on-change",
+        action="store_true",
+        help="exit 1 when anything got worse since the previous scan",
+    )
+    scan_parser.add_argument("--webhook", default=None, help="post a change summary to this URL")
+    scan_parser.add_argument(
+        "--webhook-format", choices=list(WEBHOOK_FORMATS), default="json", help="webhook payload shape"
+    )
+    scan_parser.add_argument(
+        "--prune", type=int, default=50, help="scans to keep per site in the history (default 50)"
+    )
+
+    history_parser = subparsers.add_parser(
+        "history",
+        help="show what has been scanned and how it has trended",
+        description="Reads the local scan history. Makes no network requests.",
+    )
+    history_parser.add_argument("site", nargs="?", help="a site to show the trend for")
+    history_parser.add_argument("--history", default=None, help="scan history path")
+    history_parser.add_argument("--limit", type=int, default=10, help="scans to show")
 
     return parser
 
@@ -120,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "update":
             return _run_update(args)
+        if args.command == "history":
+            return _run_history(args)
         return _run_scan(args)
     except KeyboardInterrupt:
         print("\nInterrupted.", file=sys.stderr)
@@ -149,15 +203,77 @@ def _run_update(args) -> int:
     if not args.quiet:
         records = iter_progress(records)
 
+    # What already matched, before the new data lands. Anything matching afterwards that is not in
+    # this set is genuinely new to these sites, rather than something they have had all along.
+    history = None
+    before: list = []
+    if args.alert_known:
+        history = ScanHistory(args.history)
+        before = match_inventory(database, history)
+
     count = database.replace_source(source.name, records, attribution=source.attribution)
     info = database.info()
 
     if not args.quiet:
-        print(
-            f"Indexed {count:,} advisory records covering {info.component_count:,} components."
-        )
+        print(f"Indexed {count:,} advisory records covering {info.component_count:,} components.")
         print(f"  {source.attribution}")
-    return EXIT_OK
+
+    exit_code = EXIT_OK
+    if args.alert_known and history is not None:
+        fresh = new_matches(before, match_inventory(database, history))
+        text = render_feed_alert(fresh)
+        if text:
+            print()
+            print(text)
+            exit_code = EXIT_FINDINGS
+            if args.webhook:
+                payload = build_payload([], feed_alert_text=text, feed_alert_count=len(fresh))
+                delivered, error = send_webhook(args.webhook, payload, args.webhook_format)
+                if not delivered:
+                    print(f"Webhook delivery failed: {error}", file=sys.stderr)
+        elif not args.quiet:
+            print("\nNothing in this update affects a component seen on a scanned site.")
+        history.close()
+
+    return exit_code
+
+
+def _run_history(args) -> int:
+    history = ScanHistory(args.history)
+    try:
+        if not args.site:
+            sites = history.sites()
+            if not sites:
+                print("No scans recorded yet.")
+                return EXIT_OK
+            print(f"{len(sites)} site(s) in {history.path}, {history.count()} scan(s) recorded:\n")
+            for site in sites:
+                trend = history.trend(site, limit=1)
+                last = trend[0] if trend else {}
+                state = (
+                    f"{last.get('score')}/100 grade {last.get('grade')}"
+                    if last.get("completed")
+                    else "could not be scanned"
+                )
+                print(f"  {site:<40} {state}  ({last.get('scanned_at', '')})")
+            return EXIT_OK
+
+        key = site_key(args.site)
+        trend = history.trend(key, limit=args.limit)
+        if not trend:
+            print(f"No scans recorded for {key}.")
+            return EXIT_OK
+
+        print(f"{key} - most recent first\n")
+        for entry in trend:
+            if entry["completed"]:
+                print(f"  {entry['scanned_at']}  {entry['score']:>3}/100  {entry['grade']}  "
+                      f"WordPress {entry['wordpress_version'] or '?'}")
+            else:
+                print(f"  {entry['scanned_at']}    -      -  could not be scanned")
+        return EXIT_OK
+    finally:
+        history.close()
 
 
 def _read_targets(args) -> list[str]:
@@ -195,8 +311,10 @@ def _run_scan(args) -> int:
                 file=sys.stderr,
             )
 
+    history = None if args.no_history else ScanHistory(args.history)
     client = WordPressOrg(enabled=not args.skip_version_lookup)
     reports: list[ScanReport] = []
+    diffs: list[ScanDiff] = []
 
     for target in targets:
         report = scan(
@@ -213,10 +331,30 @@ def _run_scan(args) -> int:
             _enrich_with_wpscan(report, args.wpscan_token)
         reports.append(report)
 
-        if args.format == "text" and not args.quiet:
+        if history is not None:
+            # Read the previous scan before recording this one, or the diff compares the scan
+            # against itself.
+            key = site_key(report)
+            previous = history.previous(key)
+            diffs.append(compare(previous, report, site=key))
+            history.record(report)
+        else:
+            diffs.append(compare(None, report, site=site_key(report)))
+
+        # --only-changes owns stdout: printing the full report as well would defeat the point of
+        # a job that is supposed to be silent when nothing happened.
+        if args.format == "text" and not args.quiet and not args.only_changes:
             print(render_text(report, colour=not args.no_colour, show_passed=args.show_passed), end="")
 
-    output = _render(args, reports)
+    if history is not None:
+        if args.prune > 0:
+            history.prune(args.prune)
+        history.close()
+
+    if args.only_changes and not args.quiet:
+        _print_changes(diffs, colour=not args.no_colour)
+
+    output = _render(args, reports, diffs)
     if args.output:
         Path(args.output).write_text(output, encoding="utf-8")
         if not args.quiet:
@@ -224,15 +362,52 @@ def _run_scan(args) -> int:
     elif args.format != "text":
         print(output)
 
+    if args.webhook:
+        _post_changes(args, diffs)
+
     if database is not None:
         database.close()
 
+    if args.fail_on_change and any(_got_worse(diff) for diff in diffs):
+        return EXIT_FINDINGS
     return _exit_code(reports, args.fail_on)
 
 
-def _render(args, reports: list[ScanReport]) -> str:
+def _got_worse(diff: ScanDiff) -> bool:
+    return bool(diff.regressions or diff.new_vulnerabilities or diff.became_unreachable)
+
+
+def _print_changes(diffs: list[ScanDiff], *, colour: bool) -> None:
+    """Print the delta, and print nothing at all when there is none.
+
+    The silence is the feature: cron mails whatever a job prints, so a quiet night sends no mail.
+    """
+    text = render_summary_text(diffs)
+    first = [d for d in diffs if d.first_scan and d.completed]
+    if not text and not first:
+        return
+
+    if text:
+        print(text)
+    for diff in first:
+        print(f"{diff.site}: first scan, {diff.current_score}/100 grade {diff.current_grade} "
+              "(nothing to compare against yet)")
+
+
+def _post_changes(args, diffs: list[ScanDiff]) -> None:
+    if not any(diff.has_changes and not diff.first_scan for diff in diffs):
+        return
+    payload = build_payload(diffs)
+    delivered, error = send_webhook(args.webhook, payload, args.webhook_format)
+    if not delivered:
+        # The findings are on stdout and in the history either way; a failed post must not look
+        # like a clean run.
+        print(f"Webhook delivery failed: {error}", file=sys.stderr)
+
+
+def _render(args, reports: list[ScanReport], diffs: list[ScanDiff] | None = None) -> str:
     if args.format == "json":
-        return render_json(reports)
+        return render_json(reports, diffs)
     if args.format == "html":
         return render_html(reports)
     return "".join(

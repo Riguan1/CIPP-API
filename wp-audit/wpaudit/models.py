@@ -182,6 +182,8 @@ class ScanReport:
     certificate: dict[str, Any] | None = None
     vulnerability_db: dict[str, Any] | None = None
     requests_made: int = 0
+    #: Check groups this scan did not run, so a later diff does not read their absence as a fix.
+    skipped: list[str] = field(default_factory=list)
     error: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -201,5 +203,6 @@ class ScanReport:
             "certificate": self.certificate,
             "vulnerability_db": self.vulnerability_db,
             "requests_made": self.requests_made,
+            "skipped": self.skipped,
             "error": self.error,
         }

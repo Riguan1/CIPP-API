@@ -94,14 +94,16 @@ def render_text(report: ScanReport, *, colour: bool = True, show_passed: bool = 
     return "\n".join(lines) + "\n"
 
 
-def render_json(reports: list[ScanReport]) -> str:
-    return json.dumps(
-        {
-            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "scans": [report.to_dict() for report in reports],
-        },
-        indent=2,
-    )
+def render_json(reports: list[ScanReport], diffs=None) -> str:
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "scans": [report.to_dict() for report in reports],
+    }
+    if diffs is not None:
+        # Whatever consumes the JSON gets the same delta the terminal and the webhook get, rather
+        # than having to store the previous run and work it out again.
+        payload["changes"] = [diff.to_dict() for diff in diffs]
+    return json.dumps(payload, indent=2)
 
 
 def render_html(reports: list[ScanReport]) -> str:

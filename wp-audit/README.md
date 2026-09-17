@@ -11,6 +11,9 @@ what do I tell the customer.
 $ wp-audit update                              # refresh the vulnerability database (nightly cron)
 $ wp-audit scan example.com                    # scan one site
 $ wp-audit scan -f customers.txt --format html -o report.html
+$ wp-audit scan -f customers.txt --only-changes    # only what changed since last time
+$ wp-audit update --alert-known                    # "does today's feed affect my customers?"
+$ wp-audit history klant.nl                        # how that site has trended
 ```
 
 ## Before you scan
@@ -51,14 +54,6 @@ wp-audit update --db /srv/wp-audit/vulndb.sqlite
 wp-audit update --from-file feed.json   # air-gapped: download the feed elsewhere
 ```
 
-Put it in cron and the scanner is as current as the feed:
-
-```cron
-15 3 * * *  /srv/wp-audit/.venv/bin/wp-audit update -q --db /srv/wp-audit/vulndb.sqlite
-30 3 * * *  /srv/wp-audit/.venv/bin/wp-audit scan -f /srv/wp-audit/customers.txt \
-              --db /srv/wp-audit/vulndb.sqlite --format html -o /srv/reports/$(date +\%F).html -q
-```
-
 The database's age travels with every report, and a scan against data more than a week old says so
 in its findings. A scan against a three-month-old database is not a clean bill of health.
 
@@ -68,6 +63,115 @@ carried in the report.
 **WPScan** is supported as an optional second opinion for people who already pay for it
 (`--wpscan-token`). It is per-component rather than bulk — one API request per plugin, and the free
 tier allows 25 a day — so it is strictly opt-in and not a basis for sweeping a customer base.
+
+## Staying current, and hearing about it
+
+Two schedules, because they answer different questions.
+
+### Nightly: has anything new been published?
+
+```cron
+15 3 * * *  /srv/wp-audit/.venv/bin/wp-audit update --alert-known \
+              --db /srv/wp-audit/vulndb.sqlite --history /srv/wp-audit/history.sqlite -q
+```
+
+`--alert-known` is the part that matters. After indexing the new feed it checks it against the
+component inventory from your past scans and reports only what is *newly* relevant:
+
+```
+3 new advisory match(es) against components already seen on 1 site(s):
+
+  klant.nl
+    - contact-form-7 5.7.0 | CVE-2023-6449 | CVSS 9.8 | fixed in 5.7.2
+      Contact Form 7 <= 5.7.1 - Unauthenticated Arbitrary File Upload
+```
+
+No HTTP requests, no re-scanning, and it covers your customers *between* scans: a vulnerability
+published this morning in a plugin you last scanned on Friday surfaces tonight. Run it again with
+the same feed and it says nothing — only genuinely new matches are reported, so the alert does not
+become the thing everybody filters.
+
+### Daily or weekly: has anything changed on the sites?
+
+```cron
+30 3 * * *  /srv/wp-audit/.venv/bin/wp-audit scan -f /srv/wp-audit/customers.txt \
+              --db /srv/wp-audit/vulndb.sqlite --history /srv/wp-audit/history.sqlite \
+              --only-changes --fail-on-change
+```
+
+Every scan is recorded, and each one is compared with the previous scan of the same site.
+`--only-changes` prints **only the difference, and nothing at all when there is none**:
+
+```
+klant.nl: B -> F (0/100, -38)
+  ! new critical: A wp-config backup is downloadable
+  ! new vulnerability on contact-form-7 5.7.0: CVE-2023-6449 (fixed in 5.7.2)
+
+andere-klant.nl: C -> B (78/100, +8)
+  + fixed: HSTS is not enabled
+```
+
+That silence is the whole notification system: cron mails you whatever a job prints, so a quiet
+night sends no mail and a changed site does. No credentials, no integration, nothing to keep
+working. Improvements are reported alongside regressions — they are what you show the customer at
+the end of the month, and a batch of findings reappearing together is how you spot a site that was
+restored from an old backup.
+
+Things the diff deliberately does **not** call a change:
+
+* A check that could not run this time (`Unknown`). "We could not see it" is not "they fixed it".
+* A check group you switched off. Running with `--skip-exposure` does not report every exposure
+  finding as resolved.
+* A site that went unreachable. Its findings do not all vanish — it is reported as unreachable.
+
+### Into Teams or Slack
+
+```bash
+wp-audit scan -f customers.txt --webhook "$TEAMS_URL" --webhook-format teams -q
+wp-audit update --alert-known --webhook "$SLACK_URL" --webhook-format slack -q
+```
+
+Posted only when something changed. For Teams use a **Workflows** webhook ("When a Teams webhook
+request is received") — the old Office 365 connectors that took MessageCards have been retired, and
+this sends an Adaptive Card. A failed delivery is reported on stderr and never loses the findings:
+they are still on stdout and in the history.
+
+There is deliberately no SMTP client. It would mean this tool holding a mail password, and the
+machine already has a way to send mail that is configured and monitored. Pipe the output, or use
+the cron behaviour above.
+
+### Looking back
+
+```bash
+wp-audit history                 # every site, with its last result
+wp-audit history klant.nl        # that site's trend, most recent first
+```
+
+```
+klant.nl - most recent first
+
+  2026-09-17T03:30:11+00:00   82/100  B  WordPress 6.6.2
+  2026-09-16T03:30:09+00:00   44/100  F  WordPress 6.6.2
+```
+
+History lives in `~/.cache/wp-audit/history.sqlite` (`--history` to move it, `--no-history` to
+record nothing), keeps the last 50 scans per site (`--prune`), and stores each report whole, so an
+old scan stays readable even after the checks change.
+
+### Exit codes for the scheduler
+
+| Code | Meaning |
+| --- | --- |
+| 0 | Nothing to report |
+| 1 | Findings at or above `--fail-on`, something got worse under `--fail-on-change`, or `update --alert-known` found something |
+| 2 | A site could not be scanned |
+| 3 | The tool itself failed |
+
+### Keeping the tool itself current
+
+The checks and the feed parsers change as WordPress does. `git pull && pip install -e .` in the
+checkout, and watch the repository's releases if you want to be told. The vulnerability *data* is
+the part that has to be fresh daily; the code is not on that clock.
 
 ## What a scan checks
 
@@ -121,22 +225,17 @@ Each site is capped at 30 requests by default (`--max-requests`). Checks that do
 as `Unknown`, never as passes. No cookies are kept between requests, so every check sees the
 anonymous view.
 
-## Output and exit codes
+## Output
 
-`--format text` (default), `json` or `html`. The HTML report is a single self-contained file with no
-external stylesheet, font or script — it survives being emailed, and it does not tell a CDN
-somewhere which sites you audited.
+`--format text` (default), `json` or `html`.
 
-For scheduled runs, `--fail-on <severity>` sets the exit code:
+The HTML report is a single self-contained file with no external stylesheet, font or script — it
+survives being emailed, and it does not tell a CDN somewhere which sites you audited. The JSON
+carries the findings and the change set from the same run, so whatever consumes it does not have to
+store the previous scan and work the difference out again.
 
-| Code | Meaning |
-| --- | --- |
-| 0 | Nothing at or above the threshold |
-| 1 | Findings at or above `--fail-on` |
-| 2 | A site could not be scanned (unreachable, or refused by the target guard) |
-| 3 | The tool itself failed |
-
-A site that could not be scanned never looks like a site that came back clean.
+Exit codes are listed under [Staying current](#exit-codes-for-the-scheduler). A site that could not
+be scanned never looks like a site that came back clean.
 
 ## Development
 

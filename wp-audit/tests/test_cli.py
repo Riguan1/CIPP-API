@@ -156,3 +156,183 @@ class TestExitCodes:
     def test_a_refused_target_is_reported_not_scanned(self, capsys):
         code = main(["scan", "http://169.254.169.254/", "--no-vulndb", "-q", "--no-colour"])
         assert code == EXIT_SCAN_FAILED
+
+
+class TestChangeReporting:
+    """The workflow this is all for: scan, scan again, hear about the difference."""
+
+    def test_says_nothing_when_nothing_changed(
+        self, tmp_path, make_site, allow_local_targets, capsys
+    ):
+        # The silence is the notification mechanism: cron mails whatever a job prints, so a quiet
+        # night must print nothing at all.
+        site = make_site({"/": Route(200, WP_HOME)})
+        history = tmp_path / "history.sqlite"
+        common = ["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+                  "--history", str(history), "--only-changes", "--no-colour"]
+
+        main(common)          # first scan, nothing to compare against
+        capsys.readouterr()
+        main(common)          # second scan, identical site
+
+        assert capsys.readouterr().out.strip() == ""
+
+    def test_reports_a_finding_that_appeared(
+        self, tmp_path, make_site, allow_local_targets, capsys
+    ):
+        history = tmp_path / "history.sqlite"
+        clean = make_site({"/": Route(200, WP_HOME)})
+        main(["scan", clean.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "-q"])
+        capsys.readouterr()
+
+        # Same host and port, now serving a downloadable wp-config backup.
+        clean.routes["/wp-config.php.bak"] = Route(
+            200, "<?php define('DB_NAME','x'); define('DB_PASSWORD','y');", content_type="text/plain"
+        )
+        main(["scan", clean.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "--only-changes", "--no-colour"])
+
+        output = capsys.readouterr().out
+        assert "new critical" in output
+        assert "wp-config" in output.lower()
+
+    def test_reports_a_finding_that_was_fixed(
+        self, tmp_path, make_site, allow_local_targets, capsys
+    ):
+        history = tmp_path / "history.sqlite"
+        site = make_site(
+            {
+                "/": Route(200, WP_HOME),
+                "/wp-config.php.bak": Route(
+                    200, "<?php define('DB_NAME','x'); define('DB_PASSWORD','y');",
+                    content_type="text/plain",
+                ),
+            }
+        )
+        main(["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "-q"])
+        capsys.readouterr()
+
+        del site.routes["/wp-config.php.bak"]
+        main(["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "--only-changes", "--no-colour"])
+
+        # What the MSP shows the customer at the end of the month.
+        assert "+ fixed:" in capsys.readouterr().out
+
+    def test_fail_on_change_exits_non_zero_only_when_something_got_worse(
+        self, tmp_path, make_site, allow_local_targets
+    ):
+        history = tmp_path / "history.sqlite"
+        site = make_site({"/": Route(200, WP_HOME)})
+        args = ["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+                "--history", str(history), "--fail-on-change", "-q"]
+
+        assert main(args) == EXIT_OK      # first scan
+        assert main(args) == EXIT_OK      # unchanged
+
+        site.routes["/.env"] = Route(200, "DB_HOST=localhost\nAPP_KEY=abc", content_type="text/plain")
+        assert main(args) == EXIT_FINDINGS
+
+    def test_records_the_trend_and_shows_it(
+        self, tmp_path, make_site, allow_local_targets, capsys
+    ):
+        history = tmp_path / "history.sqlite"
+        site = make_site({"/": Route(200, WP_HOME)})
+        main(["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "-q"])
+        capsys.readouterr()
+
+        assert main(["history", "--history", str(history)]) == EXIT_OK
+        listing = capsys.readouterr().out
+        assert "127.0.0.1" in listing
+
+        assert main(["history", site.base_url, "--history", str(history)]) == EXIT_OK
+        assert "WordPress 6.3.1" in capsys.readouterr().out
+
+    def test_the_json_report_carries_the_changes(
+        self, tmp_path, make_site, allow_local_targets
+    ):
+        history = tmp_path / "history.sqlite"
+        site = make_site({"/": Route(200, WP_HOME)})
+        out = tmp_path / "report.json"
+        main(["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "-q"])
+        main(["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "--format", "json", "-o", str(out), "-q"])
+
+        payload = json.loads(out.read_text(encoding="utf-8"))
+        assert "changes" in payload
+        assert payload["changes"][0]["first_scan"] is False
+
+    def test_no_history_leaves_nothing_behind(
+        self, tmp_path, make_site, allow_local_targets
+    ):
+        history = tmp_path / "history.sqlite"
+        site = make_site({"/": Route(200, WP_HOME)})
+        main(["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "--no-history", "-q"])
+        assert not history.exists()
+
+    def test_posts_changes_to_a_webhook(
+        self, tmp_path, make_site, allow_local_targets, monkeypatch
+    ):
+        import wpaudit.cli as cli_module
+
+        posted = []
+        monkeypatch.setattr(cli_module, "send_webhook", lambda *a, **k: (posted.append(a) or (True, "")))
+
+        history = tmp_path / "history.sqlite"
+        site = make_site({"/": Route(200, WP_HOME)})
+        args = ["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+                "--history", str(history), "--webhook", "https://hooks.example/x", "-q"]
+
+        main(args)
+        assert posted == []          # first scan: nothing to report
+
+        site.routes["/.env"] = Route(200, "DB_HOST=x\nAPP_KEY=y", content_type="text/plain")
+        main(args)
+        assert len(posted) == 1      # a change: posted once
+
+
+class TestFeedUpdateAlerts:
+    def test_reports_advisories_affecting_sites_already_scanned(
+        self, tmp_path, make_site, allow_local_targets, feed_file, capsys
+    ):
+        db = tmp_path / "vulndb.sqlite"
+        history = tmp_path / "history.sqlite"
+
+        # A customer site is scanned while the database is still empty.
+        site = make_site({"/": Route(200, WP_HOME)})
+        main(["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "-q"])
+        capsys.readouterr()
+
+        # Then the feed arrives, carrying advisories against what that site runs.
+        code = main(["update", "--db", str(db), "--from-file", str(feed_file),
+                     "--history", str(history), "--alert-known"])
+
+        output = capsys.readouterr().out
+        assert "contact-form-7" in output
+        assert "CVE-2023-6449" in output
+        # Something needing attention is worth a non-zero exit for a cron job.
+        assert code == EXIT_FINDINGS
+
+    def test_a_second_identical_update_is_silent(
+        self, tmp_path, make_site, allow_local_targets, feed_file, capsys
+    ):
+        # Otherwise the nightly job repeats the same alert until nobody reads it.
+        db = tmp_path / "vulndb.sqlite"
+        history = tmp_path / "history.sqlite"
+        site = make_site({"/": Route(200, WP_HOME)})
+        main(["scan", site.base_url, "--no-vulndb", "--skip-version-lookup",
+              "--history", str(history), "-q"])
+        main(["update", "--db", str(db), "--from-file", str(feed_file),
+              "--history", str(history), "--alert-known", "-q"])
+        capsys.readouterr()
+
+        code = main(["update", "--db", str(db), "--from-file", str(feed_file),
+                     "--history", str(history), "--alert-known"])
+        assert "Nothing in this update affects" in capsys.readouterr().out
+        assert code == EXIT_OK

@@ -54,6 +54,12 @@ def scan(
 ) -> ScanReport:
     report = ScanReport(url=url, scanned_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
 
+    if skip_exposure:
+        report.skipped.append("Exposure")
+        report.skipped.append("Enumeration")
+    if database is None:
+        report.skipped.append("Vulnerabilities")
+
     target = validate_target(url)
     if not target.valid:
         report.error = target.reason

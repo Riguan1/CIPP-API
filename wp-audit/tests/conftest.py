@@ -113,6 +113,18 @@ class FakeSite:
         return f"http://127.0.0.1:{self.port}/"
 
 
+@pytest.fixture(autouse=True)
+def isolate_user_state(tmp_path, monkeypatch):
+    """Keep every test out of the real ~/.cache/wp-audit.
+
+    The scan history and vulnerability database default to the user's cache directory, which the
+    CLI tests would otherwise write to for real - polluting whatever the developer has scanned, and
+    making the tests depend on it. Autouse so no new test can forget.
+    """
+    monkeypatch.setenv("WP_AUDIT_HISTORY", str(tmp_path / "history.sqlite"))
+    monkeypatch.setenv("WP_AUDIT_DB", str(tmp_path / "vulndb.sqlite"))
+
+
 @pytest.fixture
 def make_site():
     """Start a fake site for the duration of one test."""
