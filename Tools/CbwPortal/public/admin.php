@@ -10,6 +10,7 @@ require __DIR__ . '/../src/bootstrap.php';
 
 use CbwPortal\Config;
 use CbwPortal\Controls;
+use CbwPortal\Meting;
 use CbwPortal\Stand;
 
 $config = Config::laden();
@@ -65,25 +66,20 @@ try {
         if ($klant === null || !$klant['tenant']) {
             $fout = 'Koppel deze klant eerst aan een tenant.';
         } else {
-            try {
-                $stand = $config->cipp()->stand((string)$klant['tenant']);
-                $bron = $config->backupBron();
-                $backupRef = (string)($klant['backup_ref'] ?? '');
+            $vorige = $dossier->stand($clientId)['stand'];
+            ['stand' => $stand, 'waarschuwingen' => $waarschuwingen, 'gemeten' => $nieuw] =
+                (new Meting($config))->voorKlant($klant, $vorige);
 
-                if ($bron !== null && $backupRef !== '') {
-                    foreach ($bron->bevindingen($backupRef) as $id => $bevinding) {
-                        $stand['bevindingen'][$id] = $bevinding;
-                        if ($bevinding['status'] !== 'onbekend') {
-                            unset($stand['nietTeMeten'][$id]);
-                        }
-                    }
+            if ($stand === null || $nieuw === 0) {
+                $dossier->standOpslaan($clientId, $stand, implode(' | ', $waarschuwingen));
+                $fout = 'Geen nieuwe gegevens opgehaald. ' . implode(' | ', $waarschuwingen);
+            } else {
+                $dossier->standOpslaan($clientId, $stand, $waarschuwingen === [] ? null : implode(' | ', $waarschuwingen));
+                $bruikbaar = count(array_filter($stand['bevindingen'], static fn($b) => $b['status'] !== 'onbekend'));
+                $melding = "Stand opgehaald: {$nieuw} bevindingen binnen, {$bruikbaar} bruikbaar.";
+                if ($waarschuwingen !== []) {
+                    $fout = 'Deels gelukt - ' . implode(' | ', $waarschuwingen);
                 }
-
-                $dossier->standOpslaan($clientId, $stand);
-                $melding = 'Stand opgehaald' . ($bron !== null && $backupRef !== '' ? ', inclusief back-up.' : ' uit CIPP.');
-            } catch (Throwable $e) {
-                $dossier->standOpslaan($clientId, null, $e->getMessage());
-                $fout = $e->getMessage();
             }
         }
     }

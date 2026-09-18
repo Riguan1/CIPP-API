@@ -13,7 +13,7 @@ use RuntimeException;
  * geautoriseerd in HostBill onder Settings > Security > API access: geef hem alleen de calls die
  * hieronder worden gebruikt, niets meer.
  *
- * Gebruikte calls: getClients, getClientDetails.
+ * Gebruikte calls: getClients, getClientDetails, getClientTickets.
  */
 final class HostBill
 {
@@ -97,6 +97,57 @@ final class HostBill
         }
 
         return null;
+    }
+
+    /**
+     * Levert een bevinding voor controle b3: worden incidenten met een tijdstip vastgelegd?
+     *
+     * HostBill is bij de meeste partijen feitelijk het incidentregister. Wat het systeem kan
+     * aantonen is dat er een registratie met tijdstempels bestaat - niet welke daarvan een
+     * beveiligingsincident was. Daarom nooit meer dan 'deels': voor de meldplicht moet herleidbaar
+     * zijn wanneer een incident is ontdekt, en dat vraagt een herkenbaar label of een eigen afdeling.
+     *
+     * @return array<string, array{status: string, kop: string, detail: string, bron: string}>
+     */
+    public function incidentregistratie(string $clientId): array
+    {
+        // Een storing gooit door naar Meting, die er een waarschuwing van maakt en de vorige stand
+        // laat staan. Hier stilzwijgend 'onbekend' teruggeven zou de bestaande bevinding wissen.
+        $antwoord = $this->call('getClientTickets', ['id' => $clientId]);
+
+        $tickets = $antwoord['tickets'] ?? [];
+        $grens = time() - (365 * 86400);
+        $recent = 0;
+
+        foreach ($tickets as $ticket) {
+            foreach (['date_created', 'datecreated', 'date', 'created_at'] as $sleutel) {
+                $waarde = $ticket[$sleutel] ?? null;
+                $tijd = is_numeric($waarde) ? (int)$waarde : (is_string($waarde) ? strtotime($waarde) : false);
+                if ($tijd !== false && $tijd !== 0 && $tijd >= $grens) {
+                    $recent++;
+                    break;
+                }
+            }
+        }
+
+        if ($recent === 0) {
+            return ['b3' => [
+                'status' => 'onbekend',
+                'kop'    => 'Geen tickets van het afgelopen jaar gevonden',
+                'detail' => 'Dat betekent niet dat er geen incidentregistratie is - het betekent dat wij hier geen '
+                          . 'registratie zien. Leg vast waar incidenten worden bijgehouden.',
+                'bron'   => 'HostBill - tickets',
+            ]];
+        }
+
+        return ['b3' => [
+            'status' => 'deels',
+            'kop'    => "{$recent} tickets met tijdstempel in het afgelopen jaar",
+            'detail' => 'Er is een registratie met tijdstippen. Voor de meldplicht moet daarnaast herleidbaar zijn '
+                      . 'welke meldingen beveiligingsincidenten waren en wanneer ze zijn ontdekt - geef die een eigen '
+                      . 'afdeling of label, want dat tijdstip start de 24-uursklok.',
+            'bron'   => 'HostBill - tickets',
+        ]];
     }
 
     /** Test de verbinding en geeft een leesbare uitkomst terug voor de diagnosepagina. */

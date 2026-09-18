@@ -108,6 +108,8 @@ final class Controls
             'e1' => 'Intune - apparaatnaleving',
             'e4' => 'CIPP - toegepaste standaarden',
             'f2' => 'Microsoft Secure Score',
+            'g3' => 'Defender for Office 365 - aanvalssimulaties',
+            'h3' => 'Exchange Online - verouderde protocollen',
             'h2' => 'Intune - schijfversleuteling',
             'i1' => 'Entra ID - aanmeldactiviteit',
             'i2' => 'Entra ID - beheerdersrollen',
@@ -117,6 +119,8 @@ final class Controls
             'j2' => 'Entra ID - verificatiemethoden',
             'j3' => 'Entra ID - voorwaardelijke toegang',
             'j5' => 'Entra ID - voorwaardelijke toegang',
+            // Uit HostBill
+            'b3' => 'HostBill - ticketregistratie',
             // Uit de back-upbron, als die is gekoppeld
             'c1' => 'Datto of NinjaOne - back-upstatus',
             'c2' => 'NinjaOne - integriteitscontroles',

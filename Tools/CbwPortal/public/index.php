@@ -219,6 +219,10 @@ function toonFout(string $titel, string $tekst, Config $config): void
             <?php if ($bevinding): ?>
               <p class="bewijs bewijs-<?= h($bevinding['status'] ?: 'onbekend') ?>">
                 <b>gemeten</b> <span><?= h($bevinding['kop']) ?></span>
+                <?php if (!empty($bevinding['gemeten'])): ?>
+                  <span style="font-family:Archivo;font-size:11.5px;color:var(--ink-3)">
+                    <?= h(date('j M', strtotime((string)$bevinding['gemeten']))) ?></span>
+                <?php endif; ?>
                 <?php if ($stand->overschreven($id)): ?><span class="overschreven">u heeft dit zelf aangepast</span><?php endif; ?>
                 <em><?= h($bevinding['bron']) ?></em>
               </p>

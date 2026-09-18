@@ -286,6 +286,59 @@ function Get-CIPPCbwReadiness {
         Add-CbwUnknown -ControlId 'f2' -Article 'art. 21.2 f' -Source 'Microsoft Secure Score' -ErrorRecord $_
     }
 
+    # --- h3: legacy protocols and transport security --------------------------------------------------
+    try {
+        $OrgConfig = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-OrganizationConfig' -Select 'SmtpClientAuthenticationDisabled'
+        $SmtpUit = $OrgConfig.SmtpClientAuthenticationDisabled -eq $true
+
+        # Per-mailbox POP and IMAP survive an org-wide SMTP AUTH block, so they are counted separately.
+        $PopImap = $null
+        try {
+            $Mailboxes = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CASMailbox' -Select 'Identity,PopEnabled,ImapEnabled')
+            $PopImap = @($Mailboxes | Where-Object { $_.PopEnabled -eq $true -or $_.ImapEnabled -eq $true }).Count
+        } catch {
+            # Geen zicht op de postvakken: dan oordelen we alleen over SMTP AUTH en zeggen dat erbij.
+        }
+
+        $Status = if (-not $SmtpUit) { 'open' } elseif ($null -eq $PopImap) { 'deels' } elseif ($PopImap -eq 0) { 'geregeld' } else { 'deels' }
+        $Kop = if (-not $SmtpUit) {
+            'SMTP-authenticatie staat organisatiebreed aan'
+        } elseif ($null -eq $PopImap) {
+            'SMTP-authenticatie staat organisatiebreed uit; POP en IMAP niet gecontroleerd'
+        } elseif ($PopImap -eq 0) {
+            'SMTP-authenticatie uit, en geen postvak met POP of IMAP'
+        } else {
+            "SMTP-authenticatie uit, maar $PopImap postvak(ken) heeft nog POP of IMAP aan"
+        }
+
+        Add-CbwControl -ControlId 'h3' -Article 'art. 21.2 h' -Status $Status `
+            -Headline $Kop `
+            -Detail 'Verouderde protocollen omzeilen voorwaardelijke toegang en meervoudige authenticatie. Dit oordeel gaat over mail; TLS op websites en andere diensten toetst u apart.' `
+            -Source 'Exchange Online - organisatie- en postvakinstellingen' `
+            -Metric ([PSCustomObject]@{ Value = $PopImap; Total = $null; Percentage = $null })
+    } catch {
+        Add-CbwUnknown -ControlId 'h3' -Article 'art. 21.2 h' -Source 'Exchange Online - organisatieinstellingen' -ErrorRecord $_
+    }
+
+    # --- g3: phishing simulations ---------------------------------------------------------------------
+    try {
+        $Simulaties = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/attackSimulation/simulations' -tenantid $TenantFilter)
+        $Grens = (Get-Date).AddMonths(-12)
+        $Recent = @($Simulaties | Where-Object {
+                $Datum = $_.completionDateTime ?? $_.launchDateTime ?? $_.createdDateTime
+                $Datum -and [datetime]$Datum -gt $Grens
+            })
+
+        $Status = if ($Recent.Count -ge 2) { 'geregeld' } elseif ($Recent.Count -eq 1) { 'deels' } else { 'open' }
+        Add-CbwControl -ControlId 'g3' -Article 'art. 21.2 g' -Status $Status `
+            -Headline "$($Recent.Count) phishingsimulatie(s) in de afgelopen twaalf maanden" `
+            -Detail 'Een simulatie telt pas als er iets met de uitkomst gebeurt: wie erin trapte krijgt opvolging, en het resultaat gaat mee in de rapportage aan het bestuur.' `
+            -Source 'Defender for Office 365 - aanvalssimulatietraining' `
+            -Metric ([PSCustomObject]@{ Value = $Recent.Count; Total = $Simulaties.Count; Percentage = $null })
+    } catch {
+        Add-CbwUnknown -ControlId 'g3' -Article 'art. 21.2 g' -Source 'Defender for Office 365 - aanvalssimulatietraining' -ErrorRecord $_
+    }
+
     # Controls that no amount of Graph will settle. Listed explicitly so a blank is never read as a pass.
     $NotDetectable = @(
         [PSCustomObject]@{ ControlId = 'c1'; Article = 'art. 21.2 c'; Reason = 'Of er back-ups buiten de tenant staan, is niet uit Microsoft 365 af te leiden. De prullenbak en bewaarbeleid van Microsoft 365 zijn geen back-up.' }

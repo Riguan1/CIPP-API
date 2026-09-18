@@ -23,7 +23,8 @@ HostBill ──ondertekende link──▶ Portaal ──ListCbwReadiness──�
 | **De volledige check** | De tien maatregelen van artikel 21 lid 2 NIS2, uitgewerkt in 45 controles, met per controle de meting en een statusknop |
 | **Rapport downloaden** | De volledige stand als pdf (via printen) of als json, met de meetdatum erbij — `rapport.php` |
 
-Van de 45 controles worden er **16 automatisch uitgelezen**, waaronder 10 van de 20 kernpunten.
+Van de 45 controles worden er **19 automatisch uitgelezen**, waaronder 10 van de 20 kernpunten:
+zestien uit CIPP, twee uit de back-upbron en één uit HostBill zelf.
 `demo.php` toont die lijst openbaar en zonder klantgegevens: de etalage voor een prospect.
 
 De klant kan zelf statussen zetten en notities vastleggen. Twee regels dragen het hele model:
@@ -33,6 +34,9 @@ De klant kan zelf statussen zetten en notities vastleggen. Twee regels dragen he
 2. **Een meting die niet lukte is geen geslaagde controle.** Een bevinding `onbekend` telt als
    onbeantwoord, nooit als groen. Mislukt de nachtelijke meting helemaal, dan blijft de vorige
    stand staan met de datum erbij — nooit een leeg scherm dat als "in orde" leest.
+3. **Bronnen vullen elkaar aan, ze vervangen elkaar niet.** Valt CIPP uit terwijl de back-upbron
+   wel antwoordt, dan blijven de CIPP-bevindingen van gisteren staan, elk met hun eigen
+   meetmoment. Zo raakt er niets kwijt en ziet niemand oude gegevens voor vers aan.
 
 ## Onderdelen
 
@@ -42,6 +46,7 @@ src/Controls.php    het controlemodel: 10 thema's, 45 controles (zelfde ids als 
 src/HostBill.php    Admin API-client (getClients, getClientDetails)
 src/Cipp.php        Entra client credentials + ListCbwReadiness
 src/Backup/         back-upbronnen: NinjaOne en Datto SaaS Protection, achter één interface
+src/Meting.php      de enige plek die bronnen samenvoegt tot één stand
 src/Dossier.php     opslag per klant: koppeling, antwoorden, laatste meting
 src/Stand.php       samenvoegen van meting en antwoorden tot één beeld
 src/Link.php        ondertekende klantlinks (HMAC-SHA256)
@@ -135,7 +140,14 @@ verouderde authenticatie, uitzonderingen op voorwaardelijke toegang, permanente 
 schijfversleuteling, apparaatnaleving, slapende gelicentieerde accounts, gasten,
 toegangsbeoordelingen, het uniforme auditlogboek, toegepaste CIPP-standaarden en Secure Score.
 
+Ook uit Microsoft 365: verouderde mailprotocollen (SMTP AUTH organisatiebreed, POP en IMAP per
+postvak) en het aantal phishingsimulaties van het afgelopen jaar.
+
 Uit de back-upbron: of er buiten de tenant een actuele kopie ligt, en of die is geverifieerd.
+
+Uit HostBill: of incidenten met een tijdstempel worden vastgelegd. Dat levert hoogstens *deels* -
+een ticketsysteem bewijst dat er een registratie is, niet welke meldingen beveiligingsincidenten
+waren. Geef die een eigen afdeling of label, want dat tijdstip start de 24-uursklok.
 
 Niet te meten, en dus altijd handwerk: de herstelproef zelf, leveranciersafspraken, CVD-beleid,
 bestuursscholing, het incidentresponsplan en noodcommunicatie. Die komen als zodanig in beeld, met

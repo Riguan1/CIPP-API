@@ -17,13 +17,13 @@ declare(strict_types=1);
 require __DIR__ . '/../src/bootstrap.php';
 
 use CbwPortal\Config;
+use CbwPortal\Meting;
 
 $config = Config::laden();
 $dossier = $config->dossier();
-$cipp = $config->cipp();
-$backup = $config->backupBron();
+$meting = new Meting($config);
 
-if ($backup === null) {
+if ($config->backupBron() === null) {
     echo "let op: geen back-upbron ingesteld, c1 en c2 blijven handwerk\n\n";
 }
 
@@ -38,36 +38,22 @@ foreach ($dossier->klanten() as $klant) {
     if ($alleen !== null && $clientId !== $alleen) {
         continue;
     }
+    // Zonder tenant kan CIPP niets, maar de incidentregistratie uit HostBill nog wel: dus meten we
+    // toch, en zeggen we erbij wat er ontbreekt.
     if ($tenant === '') {
-        printf("overgeslagen  %-24s geen tenant gekoppeld\n", $klant['naam']);
+        printf("let op        %-24s geen tenant gekoppeld, alleen HostBill\n", $klant['naam']);
+    }
+
+    $vorige = $dossier->stand($clientId)['stand'];
+    ['stand' => $stand, 'waarschuwingen' => $waarschuwingen, 'gemeten' => $nieuw] = $meting->voorKlant($klant, $vorige);
+
+    // Niets nieuws binnengekregen telt als mislukt, ook als er nog een oude stand ligt: anders
+    // meldt de cron 'gemeten' terwijl er dagen niets is opgehaald.
+    if ($stand !== null && $nieuw === 0) {
+        $dossier->standOpslaan($clientId, $stand, implode(' | ', $waarschuwingen));
+        printf("MISLUKT       %-24s geen nieuwe gegevens; vorige stand blijft staan\n", $klant['naam']);
+        $mislukt++;
         continue;
-    }
-
-    // De twee bronnen worden los opgehaald: valt CIPP uit, dan is de back-upstand nog steeds bruikbaar.
-    $stand = null;
-    $waarschuwingen = [];
-
-    try {
-        $stand = $cipp->stand($tenant);
-    } catch (Throwable $e) {
-        $waarschuwingen[] = 'CIPP: ' . $e->getMessage();
-    }
-
-    $backupRef = (string)($klant['backup_ref'] ?? '');
-    if ($backup !== null && $backupRef !== '') {
-        try {
-            $bevindingen = $backup->bevindingen($backupRef);
-            $stand ??= ['bevindingen' => [], 'nietTeMeten' => [], 'signalen' => [], 'opgehaald' => gmdate('c'), 'tenant' => $tenant];
-            foreach ($bevindingen as $id => $bevinding) {
-                $stand['bevindingen'][$id] = $bevinding;
-                // Een echte meting vervangt de melding dat iets niet te meten was.
-                if ($bevinding['status'] !== 'onbekend') {
-                    unset($stand['nietTeMeten'][$id]);
-                }
-            }
-        } catch (Throwable $e) {
-            $waarschuwingen[] = $backup->naam() . ': ' . $e->getMessage();
-        }
     }
 
     if ($stand === null) {
