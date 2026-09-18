@@ -38,6 +38,10 @@ final class Config
             'cipp_scope'        => 'CBW_CIPP_SCOPE',
             'link_secret'       => 'CBW_LINK_SECRET',
             'admin_wachtwoord'  => 'CBW_ADMIN_WACHTWOORD',
+            'backup_bron'       => 'CBW_BACKUP_BRON',
+            'backup_url'        => 'CBW_BACKUP_URL',
+            'backup_id'         => 'CBW_BACKUP_ID',
+            'backup_secret'     => 'CBW_BACKUP_SECRET',
             'db'                => 'CBW_DB',
             'merknaam'          => 'CBW_MERKNAAM',
             'accent'            => 'CBW_ACCENT',
@@ -98,6 +102,29 @@ final class Config
             $this->verplicht('cipp_secret'),
             $scope,
         );
+    }
+
+    /**
+     * De back-upbron, of null als er geen is ingesteld. Zonder bron blijven c1 en c2 handwerk -
+     * het portaal verzint geen back-up die het niet kan zien.
+     */
+    public function backupBron(): ?Backup\Bron
+    {
+        $soort = strtolower(trim((string)$this->get('backup_bron', '')));
+
+        return match ($soort) {
+            'ninjaone', 'ninja' => new Backup\NinjaOne(
+                $this->verplicht('backup_url'),
+                $this->verplicht('backup_id'),
+                $this->verplicht('backup_secret'),
+            ),
+            'datto', 'dattosaas' => new Backup\DattoSaaS(
+                (string)$this->get('backup_url', 'https://api.datto.com'),
+                $this->verplicht('backup_id'),
+                $this->verplicht('backup_secret'),
+            ),
+            default => null,
+        };
     }
 
     public function dossier(): Dossier

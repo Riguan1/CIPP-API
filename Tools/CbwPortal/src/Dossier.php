@@ -43,8 +43,16 @@ final class Dossier
             naam        VARCHAR(255),
             in_scope    VARCHAR(16) DEFAULT "onbekend",
             sector      VARCHAR(64),
+            backup_ref  VARCHAR(128),
             bijgewerkt  VARCHAR(32)
         )');
+
+        // Bestaande installaties hebben de kolom nog niet.
+        try {
+            $this->db->exec('ALTER TABLE klant ADD COLUMN backup_ref VARCHAR(128)');
+        } catch (\PDOException) {
+            // Kolom bestaat al.
+        }
 
         $this->db->exec('CREATE TABLE IF NOT EXISTS antwoord (
             client_id   VARCHAR(32) NOT NULL,
@@ -77,15 +85,20 @@ final class Dossier
         return $this->db->query('SELECT * FROM klant ORDER BY naam')->fetchAll();
     }
 
-    public function klantOpslaan(string $clientId, ?string $tenant, string $naam, string $inScope = 'onbekend', ?string $sector = null): void
-    {
-        $bestaat = $this->klant($clientId) !== null;
-        if ($bestaat) {
-            $q = $this->db->prepare('UPDATE klant SET tenant = ?, naam = ?, in_scope = ?, sector = ?, bijgewerkt = ? WHERE client_id = ?');
-            $q->execute([$tenant, $naam, $inScope, $sector, gmdate('c'), $clientId]);
+    public function klantOpslaan(
+        string $clientId,
+        ?string $tenant,
+        string $naam,
+        string $inScope = 'onbekend',
+        ?string $sector = null,
+        ?string $backupRef = null,
+    ): void {
+        if ($this->klant($clientId) !== null) {
+            $q = $this->db->prepare('UPDATE klant SET tenant = ?, naam = ?, in_scope = ?, sector = ?, backup_ref = ?, bijgewerkt = ? WHERE client_id = ?');
+            $q->execute([$tenant, $naam, $inScope, $sector, $backupRef, gmdate('c'), $clientId]);
         } else {
-            $q = $this->db->prepare('INSERT INTO klant (client_id, tenant, naam, in_scope, sector, bijgewerkt) VALUES (?, ?, ?, ?, ?, ?)');
-            $q->execute([$clientId, $tenant, $naam, $inScope, $sector, gmdate('c')]);
+            $q = $this->db->prepare('INSERT INTO klant (client_id, tenant, naam, in_scope, sector, backup_ref, bijgewerkt) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $q->execute([$clientId, $tenant, $naam, $inScope, $sector, $backupRef, gmdate('c')]);
         }
     }
 
@@ -139,8 +152,8 @@ final class Dossier
                 $u = $this->db->prepare('UPDATE stand SET fout = ? WHERE client_id = ?');
                 $u->execute([$fout, $clientId]);
             } else {
-                $u = $this->db->prepare('UPDATE stand SET json = ?, opgehaald = ?, fout = NULL WHERE client_id = ?');
-                $u->execute([$json, gmdate('c'), $clientId]);
+                $u = $this->db->prepare('UPDATE stand SET json = ?, opgehaald = ?, fout = ? WHERE client_id = ?');
+                $u->execute([$json, gmdate('c'), $fout, $clientId]);
             }
         } else {
             $i = $this->db->prepare('INSERT INTO stand (client_id, json, opgehaald, fout) VALUES (?, ?, ?, ?)');

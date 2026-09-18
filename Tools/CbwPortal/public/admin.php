@@ -47,11 +47,14 @@ try {
     if (($_POST['actie'] ?? '') === 'koppel') {
         $clientId = (string)$_POST['client_id'];
         $tenant = trim((string)$_POST['tenant']);
+        $backupRef = trim((string)($_POST['backup_ref'] ?? ''));
         $dossier->klantOpslaan(
             $clientId,
             $tenant !== '' ? $tenant : null,
             (string)$_POST['naam'],
             (string)($_POST['in_scope'] ?? 'onbekend'),
+            null,
+            $backupRef !== '' ? $backupRef : null,
         );
         $melding = 'Koppeling opgeslagen.';
     }
@@ -63,8 +66,21 @@ try {
             $fout = 'Koppel deze klant eerst aan een tenant.';
         } else {
             try {
-                $dossier->standOpslaan($clientId, $config->cipp()->stand((string)$klant['tenant']));
-                $melding = 'Stand opgehaald uit CIPP.';
+                $stand = $config->cipp()->stand((string)$klant['tenant']);
+                $bron = $config->backupBron();
+                $backupRef = (string)($klant['backup_ref'] ?? '');
+
+                if ($bron !== null && $backupRef !== '') {
+                    foreach ($bron->bevindingen($backupRef) as $id => $bevinding) {
+                        $stand['bevindingen'][$id] = $bevinding;
+                        if ($bevinding['status'] !== 'onbekend') {
+                            unset($stand['nietTeMeten'][$id]);
+                        }
+                    }
+                }
+
+                $dossier->standOpslaan($clientId, $stand);
+                $melding = 'Stand opgehaald' . ($bron !== null && $backupRef !== '' ? ', inclusief back-up.' : ' uit CIPP.');
             } catch (Throwable $e) {
                 $dossier->standOpslaan($clientId, null, $e->getMessage());
                 $fout = $e->getMessage();
@@ -93,6 +109,14 @@ try {
     }
 } catch (Throwable $e) {
     $fout = $e->getMessage();
+}
+
+$backupNaam = null;
+try {
+    $bron = $config->backupBron();
+    $backupNaam = $bron?->naam();
+} catch (Throwable) {
+    // Onvolledig ingestelde bron: de kolom blijft dan uitgeschakeld.
 }
 
 $klanten = $dossier->klanten();
@@ -168,10 +192,10 @@ function toonLogin(?string $fout): void
     <div class="card">
       <table>
         <tr>
-          <th>Klant</th><th>Tenant</th><th>Scope</th><th>Stand</th><th>Open</th><th>Gemeten</th><th></th>
+          <th>Klant</th><th>Tenant</th><th>Back-up</th><th>Scope</th><th>Stand</th><th>Open</th><th>Gemeten</th><th></th>
         </tr>
         <?php if ($klanten === []): ?>
-          <tr><td colspan="7" class="leeg">Nog geen klanten. Haal ze op uit HostBill.</td></tr>
+          <tr><td colspan="8" class="leeg">Nog geen klanten. Haal ze op uit HostBill.</td></tr>
         <?php endif; ?>
         <?php foreach ($klanten as $klant):
             $clientId = (string)$klant['client_id'];
@@ -190,8 +214,22 @@ function toonLogin(?string $fout): void
                 <input type="hidden" name="client_id" value="<?= h($clientId) ?>">
                 <input type="hidden" name="naam" value="<?= h($klant['naam']) ?>">
                 <input type="hidden" name="in_scope" value="<?= h($klant['in_scope']) ?>">
+                <input type="hidden" name="backup_ref" value="<?= h($klant['backup_ref'] ?? '') ?>">
                 <input type="text" name="tenant" value="<?= h($klant['tenant']) ?>" placeholder="klant.onmicrosoft.com" style="min-width:190px">
                 <button class="knop" type="submit">Bewaar</button>
+              </form>
+            </td>
+            <td>
+              <form method="post" style="display:flex;gap:6px;align-items:center">
+                <input type="hidden" name="actie" value="koppel">
+                <input type="hidden" name="client_id" value="<?= h($clientId) ?>">
+                <input type="hidden" name="naam" value="<?= h($klant['naam']) ?>">
+                <input type="hidden" name="tenant" value="<?= h($klant['tenant']) ?>">
+                <input type="hidden" name="in_scope" value="<?= h($klant['in_scope']) ?>">
+                <input type="text" name="backup_ref" value="<?= h($klant['backup_ref'] ?? '') ?>"
+                       placeholder="<?= $backupNaam ? h($backupNaam) . '-id' : 'geen bron' ?>" style="min-width:130px"
+                       title="Organisatie-id bij de back-upbron" <?= $backupNaam ? '' : 'disabled' ?>>
+                <button class="knop" type="submit" <?= $backupNaam ? '' : 'disabled' ?>>Bewaar</button>
               </form>
             </td>
             <td>
@@ -200,6 +238,7 @@ function toonLogin(?string $fout): void
                 <input type="hidden" name="client_id" value="<?= h($clientId) ?>">
                 <input type="hidden" name="naam" value="<?= h($klant['naam']) ?>">
                 <input type="hidden" name="tenant" value="<?= h($klant['tenant']) ?>">
+                <input type="hidden" name="backup_ref" value="<?= h($klant['backup_ref'] ?? '') ?>">
                 <select name="in_scope" onchange="this.form.submit()">
                   <?php foreach (['onbekend' => 'Onbekend', 'essentieel' => 'Essentieel', 'belangrijk' => 'Belangrijk', 'buiten' => 'Buiten scope'] as $w => $l): ?>
                     <option value="<?= $w ?>" <?= $klant['in_scope'] === $w ? 'selected' : '' ?>><?= $l ?></option>
@@ -251,6 +290,9 @@ function toonLogin(?string $fout): void
       erbij, nooit een groen vinkje dat nergens op steunt. De klantweergave opent met een ondertekende link
       die <?= (int)round(((int)$config->get('link_geldig')) / 86400) ?> dagen geldig is; vanuit HostBill krijgt de klant er elke keer een verse.
       De controles volgen de zorgplicht van artikel 21 lid 2 NIS2: <?= Controls::aantal() ?> stuks.
+      <?= $backupNaam
+        ? 'Back-ups worden uitgelezen uit ' . h($backupNaam) . '; vul per klant het organisatie-id in.'
+        : 'Er is geen back-upbron ingesteld, dus c1 en c2 blijven handwerk.' ?>
     </p>
   </section>
 </div>

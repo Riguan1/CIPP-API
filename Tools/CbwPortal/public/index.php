@@ -119,6 +119,7 @@ function toonFout(string $titel, string $tekst, Config $config): void
   <div class="topbar-in">
     <span class="merk"><?= h($merk) ?></span>
     <span class="klantnaam"><?= h($klant['naam']) ?></span>
+    <a class="knop no-print" href="rapport.php?t=<?= h($token) ?>" style="text-decoration:none">Rapport downloaden</a>
     <div class="meter" title="Aandeel maatregelen dat geregeld is">
       <span class="meter-track"><i class="meter-fill" style="width:<?= $percentage ?>%;background:<?= kleur($percentage) ?>"></i></span>
       <span class="meter-num"><?= $percentage ?>%</span>
@@ -241,6 +242,8 @@ function toonFout(string $titel, string $tekst, Config $config): void
 
   <section class="sec">
     <p class="voet">
+      Wilt u dit vastleggen of doorsturen? Met <strong>Rapport downloaden</strong> krijgt u de volledige stand
+      als pdf of als json-bestand, met de meetdatum erbij.
       Dit portaal is een hulpmiddel om samen bij te houden waar u staat. Het is geen juridisch advies en
       geen formele toets aan de Cyberbeveiligingswet. Metingen komen uit uw Microsoft 365-omgeving en
       tonen wat op dat moment aantoonbaar was; alles wat wij niet kunnen meten, blijft uw eigen

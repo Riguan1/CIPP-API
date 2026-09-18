@@ -35,6 +35,16 @@ if ($tenant !== '') {
 }
 
 try {
+    $bron = $config->backupBron();
+    $resultaten['Back-up'] = $bron === null
+        ? ['ok' => false, 'bericht' => 'Geen back-upbron ingesteld. Zonder bron blijven c1 (back-up buiten de '
+                                     . 'tenant) en c2 (herstelproef) handwerk. Zet backup_bron op ninjaone of datto.']
+        : $bron->test();
+} catch (Throwable $e) {
+    $resultaten['Back-up'] = ['ok' => false, 'bericht' => $e->getMessage()];
+}
+
+try {
     $config->dossier();
     $resultaten['Database'] = ['ok' => true, 'bericht' => 'Schema aanwezig en schrijfbaar.'];
 } catch (Throwable $e) {
