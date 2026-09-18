@@ -32,7 +32,7 @@ final class Controls
             ]],
             'b' => ['naam' => 'Incidentbehandeling', 'controles' => [
                 'b1' => ['tekst' => 'Incidentresponsplan met rollen, escalatiepaden en bereikbaarheid buiten kantooruren', 'kern' => true,  'meetbaar' => false],
-                'b2' => ['tekst' => 'Detectie en alertering belegd en ook buiten kantooruren opgevolgd',                   'kern' => true,  'meetbaar' => true],
+                'b2' => ['tekst' => 'Detectie en alertering belegd en ook buiten kantooruren opgevolgd',                   'kern' => true,  'meetbaar' => false],
                 'b3' => ['tekst' => 'Incidenten in een logboek, inclusief tijdstip van ontdekking (start van de 24-uursklok)', 'kern' => false, 'meetbaar' => false],
                 'b4' => ['tekst' => 'Het plan is minimaal jaarlijks geoefend, met een schriftelijke terugblik',            'kern' => false, 'meetbaar' => false],
                 'b5' => ['tekst' => 'Auditlogging aan, met een bewaartermijn die een incident overleeft',                  'kern' => true,  'meetbaar' => true],
@@ -48,7 +48,7 @@ final class Controls
                 'd2' => ['tekst' => 'Beveiligingseisen in contracten en verwerkersovereenkomsten',                         'kern' => false, 'meetbaar' => false],
                 'd3' => ['tekst' => 'Leveranciers periodiek beoordeeld op beveiliging',                                    'kern' => false, 'meetbaar' => false],
                 'd4' => ['tekst' => 'Leveranciers contractueel verplicht incidenten binnen 24 uur te melden',              'kern' => true,  'meetbaar' => false],
-                'd5' => ['tekst' => 'Beheerderstoegang van leveranciers via tijdelijke, herleidbare accounts',             'kern' => false, 'meetbaar' => true],
+                'd5' => ['tekst' => 'Beheerderstoegang van leveranciers via tijdelijke, herleidbare accounts',             'kern' => false, 'meetbaar' => false],
             ]],
             'e' => ['naam' => 'Verwerving, ontwikkeling en onderhoud, inclusief kwetsbaarhedenbeheer', 'controles' => [
                 'e1' => ['tekst' => 'Patchbeleid met termijnen per risicoklasse, en de naleving wordt gemeten',            'kern' => true,  'meetbaar' => true],
