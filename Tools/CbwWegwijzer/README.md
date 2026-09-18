@@ -72,6 +72,37 @@ actielijst wordt een nulmeting op volgorde van risico in plaats van urgentie. Da
 antwoord op de leveranciersvragenlijsten die klanten die er wél onder vallen gaan versturen — hun
 ketenverplichting (maatregel `d`) wordt andermans huiswerk.
 
+## Het uitdeelbare stappenplan
+
+`stappenplan.html` is de begeleidende uitgave voor klanten: dertien A4-pagina's die in zes stappen
+door de wet lopen, van scope tot jaarcyclus, met een checklist en een planning van negentig dagen.
+Bedoeld om te printen, mee te sturen of als download achter een formulier te zetten.
+
+Het merk zit op twee plekken, allebei bovenin het bestand:
+
+```js
+const MERK = {
+  naam:   "Uw organisatie",
+  accent: "#1f4a8f",   // hoofdkleur
+  diep:   "#16345f"    // donkere variant voor omslag en slotkader
+};
+```
+
+Naam en kleuren werken door in elke pagina, de omslag en het slotkader. Wilt u een logo op de
+omslag, vervang dan het element met de klasse `merk` in de eerste `section` door een `<img>`.
+
+De pdf maakt u met:
+
+```bash
+npm i playwright
+node maak-pdf.mjs      # -> Stappenplan-Cyberbeveiligingswet.pdf
+```
+
+Printen vanuit de browser kan ook: kies A4, marges "standaard" en zet achtergrondafbeeldingen aan.
+De lettertypen zijn als data-uri in het bestand opgenomen, dus de opmaak klopt ook zonder netwerk.
+De paginaindeling is krap afgesteld: als u tekst toevoegt, controleer dan of het nog dertien
+pagina's zijn.
+
 ## Draaien
 
 Eén bestand, geen build en geen afhankelijkheden:
