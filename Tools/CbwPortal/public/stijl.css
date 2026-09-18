@@ -1,0 +1,134 @@
+:root{
+  --paper:#f5f7f9; --card:#fff; --card-2:#fafbfc;
+  --ink:#151a21; --ink-2:#4b5560; --ink-3:#727e8b;
+  --line:#dce1e8; --line-2:#eaeef3;
+  --accent:#1f4a8f; --accent-2:#2c63b8; --accent-soft:#e7eefa;
+  --ok:#1a7a55; --ok-soft:#e2f1ea;
+  --warn:#96620f; --warn-soft:#faefda;
+  --crit:#a8322c; --crit-soft:#fae7e5;
+  --nvt:#727e8b; --nvt-soft:#edf0f3;
+  --shadow:0 1px 2px rgba(20,26,34,.05), 0 10px 26px -18px rgba(20,26,34,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f1319; --card:#161b23; --card-2:#1b212a;
+    --ink:#e9edf3; --ink-2:#aeb9c6; --ink-3:#8793a1;
+    --line:#29313c; --line-2:#212831;
+    --accent:#7aa6ec; --accent-2:#9cbcf3; --accent-soft:#1a2739;
+    --ok:#4fbf8d; --ok-soft:#142c23;
+    --warn:#d6a047; --warn-soft:#2c2415;
+    --crit:#e2736b; --crit-soft:#2e1a19;
+    --nvt:#8793a1; --nvt-soft:#1e242d;
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Source Serif 4", Georgia, serif; font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,label,button,th,.ui{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+h1,h2,h3{margin:0; text-wrap:balance}
+a{color:var(--accent-2)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+
+.topbar{position:sticky; top:0; z-index:30; background:var(--card); border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1080px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap}
+.merk{font-family:Archivo; font-weight:700; font-size:16px; color:var(--accent); margin-right:auto}
+.klantnaam{font-family:Archivo; font-size:13px; color:var(--ink-3)}
+.meter{display:flex; align-items:center; gap:10px}
+.meter-track{width:140px; height:8px; border-radius:99px; background:var(--line-2); border:1px solid var(--line); overflow:hidden}
+.meter-fill{display:block; height:100%; background:var(--accent)}
+.meter-num{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:14px; font-variant-numeric:tabular-nums}
+
+.shell{max-width:1080px; margin:0 auto; padding:26px 20px 80px; display:flex; flex-direction:column; gap:26px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow)}
+.pad{padding:18px}
+.sec h2{font-size:21px; font-weight:700; letter-spacing:-.015em}
+.sec p.intro{margin:4px 0 12px; color:var(--ink-2); max-width:65ch}
+
+.tegels{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px}
+.tegel{padding:16px}
+.tegel b{display:block; font-family:"IBM Plex Mono",monospace; font-size:26px; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.tegel span{font-family:Archivo; font-size:12.5px; color:var(--ink-3); display:block; margin-top:4px; line-height:1.35}
+.tegel-kern b{color:var(--crit)}
+.tegel-ok b{color:var(--ok)}
+
+.actie{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:baseline; padding:12px 18px; border-bottom:1px solid var(--line-2)}
+.actie:last-child{border-bottom:none}
+.actie .ref{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3); white-space:nowrap}
+.actie .wat{font-size:15px}
+.actie .wat small{display:block; color:var(--ink-3); font-family:Archivo; font-size:12.5px; margin-top:2px}
+.pil{font-family:Archivo; font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:3px 8px; border-radius:99px; white-space:nowrap}
+.p-open{background:var(--crit-soft); color:var(--crit)}
+.p-deels{background:var(--warn-soft); color:var(--warn)}
+.p-ok{background:var(--ok-soft); color:var(--ok)}
+.p-nvt{background:var(--nvt-soft); color:var(--nvt)}
+.kern{font-family:Archivo; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--crit); background:var(--crit-soft); padding:2px 6px; border-radius:4px; margin-left:7px; vertical-align:2px}
+
+.thema-head{display:flex; align-items:center; gap:12px; padding:14px 18px; background:var(--card-2); border-bottom:1px solid var(--line-2); flex-wrap:wrap}
+.letter{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:15px; color:var(--accent);
+  width:28px; height:28px; display:grid; place-items:center; border:1px solid var(--accent); border-radius:6px; background:var(--accent-soft)}
+.thema-head h3{font-size:15.5px; font-weight:600; margin-right:auto}
+.thema-bar{width:64px; height:5px; border-radius:99px; background:var(--line-2); overflow:hidden}
+.thema-bar i{display:block; height:100%}
+.thema-pct{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+
+.ctrl{padding:13px 18px; border-bottom:1px solid var(--line-2); display:grid; grid-template-columns:1fr auto; gap:10px 16px}
+.ctrl:last-child{border-bottom:none}
+.ctrl.kernrij{border-left:3px solid var(--crit); padding-left:15px}
+.ctrl p{margin:0; font-size:15px}
+.bewijs{grid-column:1/-1; display:flex; flex-wrap:wrap; gap:8px; align-items:baseline; margin:0;
+  padding:8px 11px; border-radius:7px; font-size:13.5px; background:var(--nvt-soft); border-left:3px solid var(--nvt)}
+.bewijs b{font-family:Archivo; font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  background:var(--card); padding:2px 6px; border-radius:4px}
+.bewijs em{font-family:Archivo; font-style:normal; font-size:11.5px; color:var(--ink-3); margin-left:auto}
+.bewijs-geregeld{background:var(--ok-soft); border-left-color:var(--ok)} .bewijs-geregeld b{color:var(--ok)}
+.bewijs-deels{background:var(--warn-soft); border-left-color:var(--warn)} .bewijs-deels b{color:var(--warn)}
+.bewijs-open{background:var(--crit-soft); border-left-color:var(--crit)} .bewijs-open b{color:var(--crit)}
+.overschreven{font-family:Archivo; font-size:11.5px; font-weight:600; color:var(--warn)}
+
+.seg{display:flex; gap:3px; background:var(--line-2); padding:3px; border-radius:8px; height:fit-content; align-self:start}
+.seg button{border:none; background:transparent; padding:5px 10px; font-size:11.5px; font-weight:600; border-radius:5px; color:var(--ink-3); cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button.aan{background:var(--card); box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg button.aan[value="geregeld"]{color:var(--ok)}
+.seg button.aan[value="deels"]{color:var(--warn)}
+.seg button.aan[value="open"]{color:var(--crit)}
+.seg button.aan[value="nvt"]{color:var(--nvt)}
+.seg button.auto{box-shadow:inset 0 0 0 1px var(--ink-3)}
+.notitie{grid-column:1/-1; display:flex; gap:8px; align-items:flex-start}
+.notitie input{flex:1}
+
+input[type=text], input[type=password], select, textarea{
+  font-family:Archivo; font-size:14px; color:var(--ink); background:var(--card-2);
+  border:1px solid var(--line); border-radius:7px; padding:8px 10px; width:100%;
+}
+button.knop{font-family:Archivo; font-size:13px; font-weight:600; cursor:pointer; border-radius:7px;
+  border:1px solid var(--line); background:var(--card); color:var(--ink-2); padding:8px 12px}
+button.knop:hover{color:var(--ink); border-color:var(--ink-3)}
+button.knop.primair{background:var(--accent); border-color:var(--accent); color:#fff}
+:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+
+table{width:100%; border-collapse:collapse; font-size:14px}
+th{font-family:Archivo; font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--ink-3); text-align:left; padding:10px 14px; border-bottom:1px solid var(--line)}
+td{padding:10px 14px; border-bottom:1px solid var(--line-2); vertical-align:middle}
+tr:last-child td{border-bottom:none}
+td .mini{width:70px; height:6px; border-radius:99px; background:var(--line-2); overflow:hidden; display:inline-block; vertical-align:middle}
+td .mini i{display:block; height:100%}
+
+.melding{padding:12px 16px; border-radius:8px; font-size:14.5px; margin:0}
+.melding-fout{background:var(--crit-soft); color:var(--crit); border-left:3px solid var(--crit)}
+.melding-ok{background:var(--ok-soft); color:var(--ok); border-left:3px solid var(--ok)}
+.melding-let{background:var(--warn-soft); color:var(--warn); border-left:3px solid var(--warn)}
+.leeg{padding:26px 18px; text-align:center; color:var(--ink-3)}
+.voet{color:var(--ink-3); font-size:13px; max-width:70ch}
+
+@media (max-width:620px){
+  .ctrl{grid-template-columns:1fr}
+  .seg{align-self:stretch} .seg button{flex:1}
+  .actie{grid-template-columns:1fr auto} .actie .ref{grid-column:1/-1}
+}
+@media print{ .topbar, .seg, .notitie, .knop, form.bewerk{display:none !important} }

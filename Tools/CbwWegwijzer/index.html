@@ -625,7 +625,7 @@ const PLICHTEN = [
    tekst:"Het bestuur keurt de maatregelen goed, ziet toe op de uitvoering en volgt zelf scholing. Bij nalatigheid kan de toezichthouder bestuurders aanspreken; bij essenti&euml;le entiteiten kan zelfs een tijdelijk bestuursverbod volgen."}
 ];
 
-const TOTAAL_CONTROLS = 40;
+const TOTAAL_CONTROLS = THEMAS.reduce((n, t) => n + t.controls.length, 0);
 
 const STATUSSEN = [
   {id:"geregeld", label:"Geregeld"},
