@@ -3,7 +3,8 @@
   "label": "Enable App Consent Admin Requests",
   "cat": "Entra (AAD) Standards",
   "tag": [
-    "CIS M365 7.0.0 (5.3.4)"
+    "CIS M365 7.0.0 (5.3.4)",
+    "aad_admin_consent_workflow"
   ],
   "impact": "Low Impact",
   "helpText": "Enables the admin consent workflow so users can request admin approval for applications instead of being blocked outright. The selected reviewer role receives the requests, and specific users (matched by display name) can be added as reviewers alongside it.",
@@ -21,26 +22,15 @@
     "warn": false,
     "remediate": false
   },
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 5,
   "compare": "subset",
   "variables": {
     "ReviewerRoles": {
-      "type": "autoComplete",
+      "type": "AdminRolesMultiSelect",
+      "multiple": true,
       "creatable": false,
-      "label": "App Consent Reviewer Role",
-      "omitWhenBlank": true,
-      "api": {
-        "url": "/api/ListGraphRequest",
-        "data": {
-          "Endpoint": "roleManagement/directory/roleDefinitions",
-          "$select": "id,displayName",
-          "$top": 999
-        },
-        "dataKey": "Results",
-        "labelField": "displayName",
-        "valueField": "id",
-        "queryKey": "ListEntraRoleDefinitions"
-      }
+      "label": "App Consent Reviewer Roles",
+      "omitWhenBlank": true
     },
     "ReviewerUsers": {
       "type": "autoComplete",

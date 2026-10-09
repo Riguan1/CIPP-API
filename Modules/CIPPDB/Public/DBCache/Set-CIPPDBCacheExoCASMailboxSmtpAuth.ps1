@@ -25,7 +25,13 @@ function Set-CIPPDBCacheExoCASMailboxSmtpAuth {
 
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching CAS mailbox SMTP AUTH overrides' -sev Debug
-        $Overrides = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CASMailbox' -cmdParams @{ Filter = 'SmtpClientAuthenticationDisabled -eq $false'; Properties = @('SmtpClientAuthenticationDisabled') }
+        # No -Properties here: that parameter belongs to Get-EXOCasMailbox, and the Admin API's
+        # classic Get-CASMailbox rejects it with an AmbiguousParameterSetException.
+        # SmtpClientAuthenticationDisabled is not an OPATH-filterable property, so the overrides are
+        # picked out client-side while streaming. Compare to $false explicitly: $null means inherit.
+        $Overrides = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CASMailbox' -StreamPages |
+            ForEach-Object { $_.Value } |
+            Where-Object { $_.SmtpClientAuthenticationDisabled -eq $false }
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoCASMailboxSmtpAuth' -Data @($Overrides | Where-Object { $_ }) -AddCount -ClearOnEmpty
         $Overrides = $null
 
